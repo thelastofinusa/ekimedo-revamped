@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
     typedEnv: true,
   },
   images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
     qualities: [100, 80],
   },
 };

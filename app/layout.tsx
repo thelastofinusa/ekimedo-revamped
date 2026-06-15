@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
-import { fontVariables } from "@/lib/fonts";
+import { fontVariables } from "@/fonts";
 import { siteConfig } from "@/config/site.config";
 
 export const metadata: Metadata = {
@@ -60,9 +60,7 @@ export const metadata: Metadata = {
 export default function RootLayout(props: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={fontVariables("antialiased h-full")}>
-        {props.children}
-      </body>
+      <body className={fontVariables("antialiased")}>{props.children}</body>
     </html>
   );
 }

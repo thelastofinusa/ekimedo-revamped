@@ -34,19 +34,19 @@ export const headerRoutes: HeaderRoute[] = [
     subroutes: [
       {
         label: "About Us",
-        path: "/about",
+        path: "/about-us",
       },
       {
         label: "Our Gallery",
-        path: "/gallery",
+        path: "/our-gallery",
       },
       {
-        label: "Testimonials",
-        path: "/testimonials",
+        label: "Reviews",
+        path: "/reviews",
       },
       {
         label: "Let's Talk",
-        path: "/contact",
+        path: "/contact-us",
       },
     ],
   },

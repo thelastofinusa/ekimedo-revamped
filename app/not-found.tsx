@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="h-dvh py-24 lg:py-32">
         <Container className="flex h-full flex-col justify-center">
           <div className="flex grow flex-col items-center justify-center pt-16 text-center">
-            <span className="mb-4 block text-[10px] tracking-[0.5em] uppercase opacity-40">
+            <span className="mb-4 block text-xs font-medium tracking-widest uppercase">
               Error 404
             </span>
             <h1 className="mb-6 max-w-4xl font-serif text-5xl leading-[1.2] sm:text-6xl md:text-7xl md:leading-[0.98] lg:text-8xl">

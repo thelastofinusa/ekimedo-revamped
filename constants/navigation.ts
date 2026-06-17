@@ -80,8 +80,8 @@ export const footerRoutes = [
         newTab: true,
       },
       {
-        label: process.env.NEXT_PUBLIC_RESEND_INFO_EMAIL,
-        path: `mailto:${process.env.NEXT_PUBLIC_RESEND_INFO_EMAIL}`,
+        label: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL,
+        path: `mailto:${process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL}`,
         newTab: true,
       },
       {

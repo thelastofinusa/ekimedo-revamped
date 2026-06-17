@@ -3,7 +3,7 @@ import Link from "next/link";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { IconType } from "react-icons/lib";
-import { ContactIcon, MailIcon } from "lucide-react";
+import { ContactIcon, MailIcon, XIcon } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import {
@@ -24,7 +24,6 @@ import { Container } from "@/components/shared/container";
 import { getSocialIcon, socialHandles } from "@/components/shared/footer";
 import { zSchema, ZSchemaType } from "@/lib/validators";
 import { Input } from "@/components/ui/input";
-import { sleep } from "@/lib/utils";
 import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Select,
@@ -36,8 +35,20 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { submitContactMessage } from "../actions";
+import { CATEGORIES_QUERY_RESULT } from "@/sanity.types";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
-export const ContactForm = () => {
+export const ContactForm: React.FC<{ categories: CATEGORIES_QUERY_RESULT }> = ({
+  categories,
+}) => {
+  const [isCustomSelected, setIsCustomSelected] =
+    React.useState<boolean>(false);
   const [isSubmitting, startTransition] = React.useTransition();
 
   const form = useForm<ZSchemaType["contact"]>({
@@ -46,24 +57,50 @@ export const ContactForm = () => {
       fName: "",
       lName: "",
       email: "",
-      inquiryType: "Others",
+      inquiryType: "",
       phone: "",
       message: "",
     },
   });
 
   async function onSubmit(values: ZSchemaType["contact"]) {
-    toast.loading("Sending message...", { id: "sending" });
+    const data = {
+      ...values,
+      inquiryType:
+        values.inquiryType === "custom"
+          ? (values.customField as string)
+          : values.inquiryType,
+    };
+
+    toast.loading("Submitting message. Please wait..", {
+      id: "submitting-message",
+    });
     startTransition(async () => {
-      await sleep(8000);
-      toast.dismiss("sending");
-      console.log(values);
-      toast.success("Message sent successfully", {
-        description: "We will get back to you in under 24/48 hours",
-      });
-      form.reset();
+      // Directly call the server action
+      const result = await submitContactMessage(data);
+      toast.dismiss("submitting-message");
+
+      if (result.success) {
+        toast.success("Submission success!", {
+          description: `Message has been sent, ${data.fName}. We will get back to you in 24/48 hours`,
+        });
+        form.reset();
+      } else {
+        toast.error("Submission failed!", {
+          description: result.error,
+        });
+      }
     });
   }
+
+  React.useEffect(() => {
+    if (form.watch("inquiryType") === "custom") {
+      setIsCustomSelected(true);
+    } else {
+      setIsCustomSelected(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.watch("inquiryType")]);
 
   return (
     <div className="flex flex-col gap-10 py-24 lg:py-32">
@@ -83,7 +120,7 @@ export const ContactForm = () => {
                   <div className="flex items-start gap-3">
                     <MailIcon className="text-background size-6" />
                     <Link
-                      href={`mailto:${process.env.NEXT_PUBLIC_RESEND_INFO_EMAIL}`}
+                      href={`mailto:${process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL}`}
                       target="_blank"
                       className="group flex flex-col gap-0.5"
                     >
@@ -91,7 +128,7 @@ export const ContactForm = () => {
                         Support Email
                       </p>
                       <p className="text-muted-foreground group-hover:text-background text-sm group-hover:underline">
-                        {process.env.NEXT_PUBLIC_RESEND_INFO_EMAIL}
+                        {process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL}
                       </p>
                     </Link>
                   </div>
@@ -242,53 +279,84 @@ export const ContactForm = () => {
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="inquiryType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>What is this about?</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger
-                            className="w-full"
-                            aria-invalid={Boolean(
-                              form.formState.errors.inquiryType,
-                            )}
-                            disabled={
-                              form.formState.isSubmitting || isSubmitting
-                            }
+                {isCustomSelected && (
+                  <FormField
+                    control={form.control}
+                    name="customField"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Please specify</FormLabel>
+                        <FormControl>
+                          <InputGroup>
+                            <InputGroupInput
+                              {...field}
+                              disabled={isSubmitting}
+                              placeholder=""
+                            />
+                            <InputGroupAddon align="inline-end">
+                              <InputGroupButton
+                                size="icon-sm"
+                                type="button"
+                                onClick={() => form.setValue("inquiryType", "")}
+                              >
+                                <XIcon />
+                              </InputGroupButton>
+                            </InputGroupAddon>
+                          </InputGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {!isCustomSelected && (
+                  <FormField
+                    control={form.control}
+                    name="inquiryType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>What is this about?</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
                           >
-                            <SelectValue />
-                          </SelectTrigger>
-                          {/* {((categories.length > 0 &&
-                            !form.formState.isSubmitting) ||
-                            !isSubmitting) && (
+                            <SelectTrigger
+                              className="w-full"
+                              aria-invalid={Boolean(
+                                form.formState.errors.inquiryType,
+                              )}
+                              disabled={
+                                form.formState.isSubmitting || isSubmitting
+                              }
+                            >
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+
                             <SelectContent>
                               <SelectGroup>
-                                {categories.map(
-                                  (type: (typeof categories)[number]) => (
-                                    <SelectItem
-                                      key={type._id}
-                                      value={type.slug!}
-                                    >
-                                      {type.name}
-                                    </SelectItem>
-                                  ),
-                                )}
-                                <SelectItem value="others">Others</SelectItem>
+                                {categories.length > 0 &&
+                                  categories.map(
+                                    (type: (typeof categories)[number]) => (
+                                      <SelectItem
+                                        key={type._id}
+                                        value={type.slug!}
+                                      >
+                                        {type.name}
+                                      </SelectItem>
+                                    ),
+                                  )}
+                                <SelectItem value="custom">Others</SelectItem>
                               </SelectGroup>
                             </SelectContent>
-                          )} */}
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 <FormField
                   control={form.control}

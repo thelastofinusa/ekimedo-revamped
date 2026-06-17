@@ -1,6 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { AiOutlineAlert } from "react-icons/ai";
-import { LucideIconInput } from "../../components/LucideIconInput";
+import { LucideIconInput } from "../components/LucideIconInput";
 
 export const cancellationPolicyType = defineType({
   name: "cancellationPolicy",

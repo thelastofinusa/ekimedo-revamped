@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Metadata } from "next";
 import { ContactForm } from "./components/contact-form";
+import { client, clientOptions } from "@/sanity/lib/client";
+import { CATEGORIES_QUERY } from "@/sanity/queries/category.query";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -166,10 +168,12 @@ export const faqs = [
   },
 ];
 
-export default function ContactUs() {
+export default async function ContactUs() {
+  const categories = await client.fetch(CATEGORIES_QUERY, {}, clientOptions);
+
   return (
     <div className="flex-1 overflow-x-clip">
-      <ContactForm />
+      <ContactForm categories={categories} />
 
       {faqs.length > 0 && (
         <div className="bg-foreground text-background py-24 lg:py-32">

@@ -46,6 +46,7 @@ import {
   FileUploadList,
 } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
+import { submitReview } from "../actions";
 
 export const NewReviewForm = () => {
   const [isCustomSelected, setIsCustomSelected] =
@@ -58,20 +59,47 @@ export const NewReviewForm = () => {
       review: "",
       rating: "",
       service: "",
-      customService: "",
+      customField: "",
+      workAssets: [],
     },
   });
 
   async function onSubmit(values: ZSchemaType["review"]) {
-    toast.loading("Sending message...", { id: "sending" });
+    const data = {
+      ...values,
+      service:
+        values.service === "custom" ? values.customField : values.service,
+      rating: Number(values.rating),
+    };
+    toast.loading("Submitting review. Please wait..", {
+      id: "submitting-review",
+    });
     startTransition(async () => {
-      await sleep(8000);
-      toast.dismiss("sending");
-      console.log(values);
-      toast.success("Message sent successfully", {
-        description: "We will get back to you in under 24/48 hours",
+      const formData = new FormData();
+
+      formData.append("review", data.review);
+      formData.append("customField", String(data.customField));
+      formData.append("service", String(data.service));
+      formData.append("rating", String(data.rating));
+
+      data.workAssets?.forEach((file) => {
+        formData.append("workAssets", file);
       });
-      form.reset();
+
+      // Directly call the server action
+      const result = await submitReview(formData);
+      toast.dismiss("submitting-review");
+
+      if (result.success) {
+        toast.success("Submission success!", {
+          description: "It will be visible after approval.",
+        });
+        form.reset();
+      } else {
+        toast.error("Submission failed!", {
+          description: result.error,
+        });
+      }
     });
   }
 
@@ -101,7 +129,7 @@ export const NewReviewForm = () => {
                 {isCustomSelected && (
                   <FormField
                     control={form.control}
-                    name="customService"
+                    name="customField"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Custom service</FormLabel>
@@ -351,9 +379,9 @@ export const NewReviewForm = () => {
           {/* <p className="text-destructive max-w-lg text-sm font-medium">
             You do not have permission to submit a review. If you&apos;d like to
             submit a review, please send us an email at{" "}
-            <a href={`mailto:${process.env.NEXT_PUBLIC_RESEND_INFO_EMAIL}`}>
+            <a href={`mailto:${process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL}`}>
               <strong className="underline">
-                {process.env.NEXT_PUBLIC_RESEND_INFO_EMAIL}
+                {process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL}
               </strong>
             </a>
           </p> */}

@@ -19,7 +19,10 @@ export const zSchema = {
       .min(2, "At least 2 characters long")
       .max(50, "At least 50 characters long"),
     email: z.email("Email address is required").min(4, "Invalid email address"),
-    inquiryType: z.string("Select an inquiry type"),
+    inquiryType: z
+      .string("Select an inquiry type")
+      .min(1, "Select an inquiry type"),
+    customField: z.string().optional(),
     phone: z
       .string("Phone number is required")
       .refine(isValidPhoneNumber, { message: "Invalid phone number" }),
@@ -80,15 +83,15 @@ export const zSchema = {
         .string("Please select a rating")
         .min(1, "Please select a rating"),
       service: z.string().min(1, "Please select a service."),
-      customService: z.string().optional(),
+      customField: z.string().optional(),
       workAssets: z.array(z.file()).optional(),
     })
     .refine(
       (data) =>
         data.service !== "custom" ||
-        (data.customService && data.customService.trim().length > 0),
+        (data.customField && data.customField.trim().length > 0),
       {
-        path: ["customService"],
+        path: ["customField"],
         message: "Please specify your custom service.",
       },
     ),

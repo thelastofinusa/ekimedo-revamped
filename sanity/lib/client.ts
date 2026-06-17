@@ -15,7 +15,7 @@ export const writeClient = createClient({
   dataset,
   apiVersion,
   useCdn: false, // Set to false if statically generating pages, using ISR or tag-based revalidation
-  // token: process.env.SANITY_API_WRITE_TOKEN,
+  token: process.env.SANITY_API_WRITE_TOKEN,
 });
 
 export const clientOptions: FilteredResponseQueryOptions = {

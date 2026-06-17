@@ -15,6 +15,16 @@
 export declare const internalGroqTypeReferenceTo: unique symbol;
 
 // Source: schema.json
+export type Permissions = {
+  _id: string;
+  _type: "permissions";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  customerName?: string;
+  customerEmail?: string;
+};
+
 export type SanityImageAssetReference = {
   _ref: string;
   _type: "reference";
@@ -232,6 +242,7 @@ export type Geopoint = {
 };
 
 export type AllSanitySchemaTypes =
+  | Permissions
   | SanityImageAssetReference
   | Testimonial
   | SanityImageCrop
@@ -309,11 +320,10 @@ export type HERO_QUERY_RESULT = Array<{
 
 // Source: sanity/queries/review.query.ts
 // Variable: REVIEW_QUERY
-// Query: *[_type == "testimonial" && status == "approved"] | order(date desc) {    _id,    "avatar": avatar.asset->url,    clerkUser,    service,    date,    name,    rating,    review,    "workAssets": workAssets[].asset->url}
+// Query: *[_type == "testimonial" && status == "approved"] | order(date desc) {    _id,    "avatar": avatar.asset->url,    service,    date,    name,    rating,    review,    "workAssets": workAssets[].asset->url}
 export type REVIEW_QUERY_RESULT = Array<{
   _id: string;
   avatar: string | null;
-  clerkUser: null;
   service: string | null;
   date: string | null;
   name: string | null;
@@ -331,6 +341,6 @@ declare module "@sanity/client" {
     '\n*[_type == "gallery"] | order(_createdAt asc){\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': GALLERY_QUERY_RESULT;
     '\n*[_type == "gallery"\n && featured == true\n  && (!defined($category) || category->slug.current == $category)\n]\n| order(_createdAt asc)\n[$start...$end]{\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': FEATURED_GALLERY_QUERY_RESULT;
     '\n    *[_type == "hero"] | order(_createdAt desc) {\n        _id,\n        "image": image.asset->url,\n        alt\n    }\n': HERO_QUERY_RESULT;
-    '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    clerkUser,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': REVIEW_QUERY_RESULT;
+    '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': REVIEW_QUERY_RESULT;
   }
 }

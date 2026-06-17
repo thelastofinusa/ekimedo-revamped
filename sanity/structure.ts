@@ -71,4 +71,5 @@ export const structure: StructureResolver = (S) =>
       S.divider(),
       // Settings
       S.documentTypeListItem("cancellationPolicy"), // ✅
+      S.documentTypeListItem("permissions"), // ✅
     ]);

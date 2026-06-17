@@ -45,7 +45,7 @@ export const ReviewsComp: React.FC<{
                 <div className="flex items-center gap-3">
                   <Avatar className="size-12">
                     <AvatarImage
-                      src={"" as string}
+                      src={review.avatar as string}
                       alt={review.name as string}
                       className="object-cover"
                     />

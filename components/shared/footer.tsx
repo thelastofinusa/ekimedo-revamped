@@ -186,9 +186,10 @@ export const Footer = async () => {
                           className={buttonVariants({
                             variant: "ghost",
                             size: "icon-xs",
+                            className: "group",
                           })}
                         >
-                          <Icon className="text-muted-foreground group-hover:text-background transition-colors" />
+                          <Icon className="text-background group-hover:text-foreground!" />
                         </a>
                       </TooltipTrigger>
                       <TooltipContent theme="light" align="start" side="bottom">

@@ -25,3 +25,58 @@ export function formatPrice(
     maximumFractionDigits: 2,
   })}`;
 }
+
+type DateFormatOption = "short" | "long" | "datetime";
+
+const DATE_FORMAT_OPTIONS: Record<
+  DateFormatOption,
+  Intl.DateTimeFormatOptions
+> = {
+  short: { day: "numeric", month: "short" },
+  long: { day: "numeric", month: "long", year: "numeric" },
+  datetime: {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  },
+};
+
+export function formatDate(
+  date: string | null | undefined,
+  format: DateFormatOption = "long",
+  fallback = "Date unknown",
+): string {
+  if (!date) return fallback;
+  return new Date(date).toLocaleDateString(
+    "en-US",
+    DATE_FORMAT_OPTIONS[format],
+  );
+}
+
+export function formatDateTimeLocal(date?: Date): string {
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    return "";
+  }
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  return `${year}-${month}-${day}`;
+}
+
+export function parseDateTimeLocal(value: string): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return undefined;
+  return date;
+}
+
+export function formatInitials(value: string): string {
+  if (!value) return "";
+  const words = value.trim().split(/\s+/);
+  if (words.length === 0) return "";
+  if (words.length === 1) return words[0].charAt(0).toUpperCase();
+  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+}

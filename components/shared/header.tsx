@@ -2,6 +2,13 @@
 "use client";
 import React from "react";
 import {
+  Show,
+  ClerkLoaded,
+  ClerkLoading,
+  SignInButton,
+  UserButton,
+} from "@clerk/nextjs";
+import {
   NavigationMenu,
   NavigationMenuContent,
   NavigationMenuItem,
@@ -17,9 +24,16 @@ import Link from "next/link";
 import { Route } from "next";
 import { headerRoutes } from "@/constants/navigation";
 import { Button } from "../ui/button";
-import { CircleUserIcon, MenuIcon, ShoppingBagIcon } from "lucide-react";
+import {
+  CircleUserIcon,
+  LayoutListIcon,
+  MenuIcon,
+  ShoppingBagIcon,
+  SquarePenIcon,
+} from "lucide-react";
 import { Separator } from "../ui/separator";
 import { FORCE_ACTIVE_ROUTES } from "@/constants/others";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Header = () => {
   const pathname = usePathname();
@@ -193,16 +207,65 @@ export const Header = () => {
             </Button>
 
             <div className="flex items-center gap-2">
-              <React.Fragment>
-                <Separator orientation="vertical" className="h-3! w-px" />
-                <Button
-                  size="icon-sm"
-                  variant={isActive ? "default" : "secondary"}
-                >
-                  <CircleUserIcon className="size-4" />
-                  <span className="sr-only">Sign in</span>
-                </Button>
-              </React.Fragment>
+              <Separator orientation="vertical" className="h-3! w-px" />
+
+              <ClerkLoading>
+                <Skeleton className="bg-secondary/30 size-8 shadow-sm" />
+              </ClerkLoading>
+
+              <ClerkLoaded>
+                <Show when="signed-in">
+                  <Button
+                    size="icon-sm"
+                    variant={isActive ? "default" : "secondary"}
+                  >
+                    <UserButton
+                      afterSwitchSessionUrl="/"
+                      appearance={{ elements: { avatarBox: "h-9 w-9" } }}
+                    >
+                      <UserButton.MenuItems>
+                        {/* Custom actions FIRST */}
+                        <UserButton.Link
+                          label="My Orders"
+                          labelIcon={
+                            <LayoutListIcon className="text-foreground mt-0.5 size-3.5" />
+                          }
+                          href="/orders"
+                        />
+
+                        <UserButton.Action label="manageAccount" />
+
+                        <UserButton.Link
+                          label="Write a Review"
+                          labelIcon={
+                            <SquarePenIcon className="text-foreground mt-0.5 size-3.5" />
+                          }
+                          href="/reviews/new"
+                        />
+
+                        <UserButton.Action label="signOut" />
+                      </UserButton.MenuItems>
+                    </UserButton>
+                  </Button>
+                </Show>
+                <Show when="signed-out" treatPendingAsSignedOut>
+                  <SignInButton
+                    mode="modal"
+                    forceRedirectUrl={pathname}
+                    fallbackRedirectUrl={pathname}
+                    signUpForceRedirectUrl={pathname}
+                    signUpFallbackRedirectUrl={pathname}
+                  >
+                    <Button
+                      size="icon-sm"
+                      variant={isActive ? "default" : "secondary"}
+                    >
+                      <CircleUserIcon className="size-4.5" />
+                      <span className="sr-only">Sign in</span>
+                    </Button>
+                  </SignInButton>
+                </Show>
+              </ClerkLoaded>
             </div>
           </div>
         </div>

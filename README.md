@@ -92,7 +92,7 @@ PAYPAL_CLIENT_SECRET="paypal_client_secret"
 
 # Resend
 RESEND_API_KEY="resend_api_key"
-NEXT_PUBLIC_RESEND_CONTACT_EMAIL="resend_loggedin_email"
+NEXT_PUBLIC_RESEND_INFO_EMAIL="resend_loggedin_email"
 NEXT_PUBLIC_RESEND_INFO_EMAIL="resend_custom_email"
 
 ```

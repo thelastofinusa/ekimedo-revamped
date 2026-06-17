@@ -1,9 +1,15 @@
 export const FORCE_ACTIVE_ROUTES = [
-  "/about",
-  "/contact",
-  "/shop/",
+  "/about-us",
+  "/contact-us",
+  "/pre-made-dresses/",
   "/orders/",
   "/checkout",
   "/checkout/success",
-  "/email-preview",
+];
+
+export const EVENT_TYPES = [
+  { value: "wedding", label: "Wedding" },
+  { value: "prom", label: "Prom" },
+  { value: "reception", label: "Reception" },
+  { value: "special-occasion", label: "Special Occasion" },
 ];

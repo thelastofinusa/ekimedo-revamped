@@ -582,7 +582,7 @@ export const consultationsData: ConsultationDataType = [
     description:
       "Perfect for galas, birthdays, dinners, and red-carpet moments. Create a refined or statement look tailored to your occasion.",
     duration: 30,
-    price: 150,
+    price: 100,
     image: "special-events-banner.jpeg",
     includes: [
       "Personal styling consultation",

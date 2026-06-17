@@ -1,12 +1,15 @@
-import React from "react";
 import { HeroSlides } from "./slides";
+import { HERO_QUERY } from "@/sanity/queries/hero.query";
+import { client, clientOptions } from "@/sanity/lib/client";
 
-const sliderData = [
-  "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2670&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2670&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2670&auto=format&fit=crop",
-];
+export const HeroComp = async () => {
+  const images = await client.fetch(HERO_QUERY, {}, clientOptions);
 
-export const HeroComp = () => {
-  return <HeroSlides images={sliderData} />;
+  // Fallback if no images are found
+  const heroImages =
+    images && images.length > 0
+      ? images.map((img) => img.image).filter(Boolean)
+      : ["/og.png", "/twitter-image.png"];
+
+  return <HeroSlides images={heroImages as string[]} />;
 };

@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { Route } from "next";
 import Image from "next/image";
@@ -8,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { formatDuration, formatPrice } from "@/lib/format";
 import { consultationsData } from "@/constants/consultation";
 
-export const ServicesComp = async () => {
+export const ServicesComp = () => {
   return (
     <div className="bg-background">
       <section className="from-secondary via-secondary/50 overflow-x-clip bg-linear-to-b to-transparent py-24 lg:py-32">

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 
 import "./globals.css";
 import { fontVariables } from "@/fonts";
@@ -60,7 +61,14 @@ export const metadata: Metadata = {
 export default function RootLayout(props: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={fontVariables("antialiased")}>{props.children}</body>
+      <body className={fontVariables("antialiased")}>
+        <ClerkProvider
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/"
+        >
+          {props.children}
+        </ClerkProvider>
+      </body>
     </html>
   );
 }

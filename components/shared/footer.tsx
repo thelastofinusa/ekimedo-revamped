@@ -19,6 +19,8 @@ import { footerRoutes } from "@/constants/navigation";
 import { Route } from "next";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { IconType } from "react-icons/lib";
+import { client, clientOptions } from "@/sanity/lib/client";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials.query";
 
 export const getSocialIcon = (name: string) => {
   switch (name) {
@@ -94,35 +96,9 @@ export const businessHours = {
   ],
 };
 
-export const socialHandles = [
-  {
-    _id: "instagram",
-    name: "Instagram",
-    url: "https://instagram.com/yourbrand",
-  },
-  {
-    _id: "facebook",
-    name: "Facebook",
-    url: "https://facebook.com/yourbrand",
-  },
-  {
-    _id: "x",
-    name: "X",
-    url: "https://x.com/yourbrand",
-  },
-  {
-    _id: "linkedin",
-    name: "LinkedIn",
-    url: "https://linkedin.com/company/yourbrand",
-  },
-  {
-    _id: "tiktok",
-    name: "TikTok",
-    url: "https://tiktok.com/@yourbrand",
-  },
-];
-
 export const Footer = async () => {
+  const socialHandles = await client.fetch(SOCIAL_QUERY, {}, clientOptions);
+
   // Utility to check if the day is "Today" for highlighting
   const isToday = (dayName: string) => {
     const today = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(

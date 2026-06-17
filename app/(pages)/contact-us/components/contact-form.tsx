@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/shared/container";
-import { getSocialIcon, socialHandles } from "@/components/shared/footer";
+import { getSocialIcon } from "@/components/shared/footer";
 import { zSchema, ZSchemaType } from "@/lib/validators";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -36,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { submitContactMessage } from "../actions";
-import { CATEGORIES_QUERY_RESULT } from "@/sanity.types";
+import { CATEGORIES_QUERY_RESULT, SOCIAL_QUERY_RESULT } from "@/sanity.types";
 import {
   InputGroup,
   InputGroupAddon,
@@ -44,9 +44,10 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
-export const ContactForm: React.FC<{ categories: CATEGORIES_QUERY_RESULT }> = ({
-  categories,
-}) => {
+export const ContactForm: React.FC<{
+  categories: CATEGORIES_QUERY_RESULT;
+  socialHandles: SOCIAL_QUERY_RESULT;
+}> = ({ categories, socialHandles }) => {
   const [isCustomSelected, setIsCustomSelected] =
     React.useState<boolean>(false);
   const [isSubmitting, startTransition] = React.useTransition();

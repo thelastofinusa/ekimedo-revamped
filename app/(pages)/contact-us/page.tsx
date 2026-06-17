@@ -18,6 +18,8 @@ import { Metadata } from "next";
 import { ContactForm } from "./components/contact-form";
 import { client, clientOptions } from "@/sanity/lib/client";
 import { CATEGORIES_QUERY } from "@/sanity/queries/category.query";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials.query";
+import { FAQ_QUERY } from "@/sanity/queries/faq.query";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -93,87 +95,14 @@ const bookingProcess = [
   },
 ];
 
-export const faqs = [
-  {
-    _id: "faq-1",
-    question: "How far in advance should I book my custom gown?",
-    answer:
-      "We recommend booking your consultation at least 4–8 months before your event. This allows sufficient time for design development, fabric sourcing, fittings, and final adjustments. Rush orders may be accepted depending on availability.",
-  },
-  {
-    _id: "faq-2",
-    question: "Do you only create bridal gowns?",
-    answer:
-      "No. In addition to bridal gowns, we design reception dresses, evening gowns, prom dresses, engagement outfits, special occasion wear, and other custom luxury garments.",
-  },
-  {
-    _id: "faq-3",
-    question: "How much does a custom gown cost?",
-    answer:
-      "Pricing varies depending on the complexity of the design, fabric selection, embellishments, and production timeline. Custom gowns typically begin in the mid-luxury range, while highly detailed couture pieces are priced individually after consultation.",
-  },
-  {
-    _id: "faq-4",
-    question: "Do you offer virtual consultations?",
-    answer:
-      "Yes. We work with clients worldwide through virtual consultations. Measurements, fittings, and design discussions can be coordinated remotely when necessary.",
-  },
-  {
-    _id: "faq-5",
-    question: "What happens during the consultation?",
-    answer:
-      "During your consultation, we discuss your vision, event details, preferred silhouettes, fabrics, inspiration references, timeline, and budget. We then provide guidance on the best approach for your custom design.",
-  },
-  {
-    _id: "faq-6",
-    question: "Can you recreate a dress from a photo?",
-    answer:
-      "We can use inspiration photos as a reference, but every gown is designed uniquely for each client. Rather than producing exact copies, we create original pieces tailored to your preferences and measurements.",
-  },
-  {
-    _id: "faq-7",
-    question: "How many fittings are included?",
-    answer:
-      "The number of fittings depends on the garment and design complexity. Most custom gowns require between 2 and 4 fittings to ensure a flawless fit and finish.",
-  },
-  {
-    _id: "faq-8",
-    question: "Do you provide alterations?",
-    answer:
-      "Yes. We offer alterations for both garments created in our atelier and select external garments, subject to assessment and availability.",
-  },
-  {
-    _id: "faq-9",
-    question: "What fabrics do you work with?",
-    answer:
-      "We work with a wide range of premium fabrics including silk, satin, crepe, organza, tulle, lace, mikado, and custom embellishments. Fabric recommendations are provided based on your design goals.",
-  },
-  {
-    _id: "faq-10",
-    question: "Is a deposit required?",
-    answer:
-      "Yes. A non-refundable deposit is required to secure your booking, begin the design process, and source materials. The remaining balance is paid according to the agreed payment schedule.",
-  },
-  {
-    _id: "faq-11",
-    question: "Can I make changes after production begins?",
-    answer:
-      "Minor adjustments may be possible depending on the stage of production. Significant design changes after materials have been ordered or construction has begun may incur additional costs.",
-  },
-  {
-    _id: "faq-12",
-    question: "Do you ship internationally?",
-    answer:
-      "Yes. Finished garments can be shipped internationally. Shipping costs, customs duties, and delivery timelines vary depending on the destination country.",
-  },
-];
-
 export default async function ContactUs() {
+  const faqs = await client.fetch(FAQ_QUERY, {}, clientOptions);
   const categories = await client.fetch(CATEGORIES_QUERY, {}, clientOptions);
+  const socialHandles = await client.fetch(SOCIAL_QUERY, {}, clientOptions);
 
   return (
     <div className="flex-1 overflow-x-clip">
-      <ContactForm categories={categories} />
+      <ContactForm categories={categories} socialHandles={socialHandles} />
 
       {faqs.length > 0 && (
         <div className="bg-foreground text-background py-24 lg:py-32">

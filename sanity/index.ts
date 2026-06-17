@@ -5,6 +5,8 @@ import { cancellationPolicyType } from "./schema/cancellation-policy";
 import { heroType } from "./schema/hero.schema";
 import { reviewType } from "./schema/review.schema";
 import { permissionType } from "./schema/permission.schema";
+import { socialType } from "./schema/social.schema";
+import { faqType } from "./schema/faq.schema";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -14,5 +16,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     heroType,
     reviewType,
     permissionType,
+    socialType,
+    faqType,
   ],
 };

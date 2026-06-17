@@ -67,9 +67,11 @@ export const structure: StructureResolver = (S) =>
             ]),
         ),
       S.documentTypeListItem("testimonial"), // ✅
+      S.documentTypeListItem("social"), // ✅
 
       S.divider(),
       // Settings
       S.documentTypeListItem("cancellationPolicy"), // ✅
       S.documentTypeListItem("permissions"), // ✅
+      S.documentTypeListItem("faq"), // ✅
     ]);

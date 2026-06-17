@@ -15,6 +15,27 @@
 export declare const internalGroqTypeReferenceTo: unique symbol;
 
 // Source: schema.json
+export type Faq = {
+  _id: string;
+  _type: "faq";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  question?: string;
+  answer?: string;
+};
+
+export type Social = {
+  _id: string;
+  _type: "social";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name?: string;
+  url?: string;
+  icon?: string;
+};
+
 export type Permissions = {
   _id: string;
   _type: "permissions";
@@ -242,6 +263,8 @@ export type Geopoint = {
 };
 
 export type AllSanitySchemaTypes =
+  | Faq
+  | Social
   | Permissions
   | SanityImageAssetReference
   | Testimonial
@@ -279,6 +302,15 @@ export type CATEGORIES_QUERY_RESULT = Array<{
   _id: string;
   name: string | null;
   slug: string | null;
+}>;
+
+// Source: sanity/queries/faq.query.ts
+// Variable: FAQ_QUERY
+// Query: *[_type == "faq"] | order(_createdAt asc) {_id,  question,  answer}
+export type FAQ_QUERY_RESULT = Array<{
+  _id: string;
+  question: string | null;
+  answer: string | null;
 }>;
 
 // Source: sanity/queries/gallery.query.ts
@@ -332,15 +364,26 @@ export type REVIEW_QUERY_RESULT = Array<{
   workAssets: Array<string | null> | null;
 }>;
 
+// Source: sanity/queries/socials.query.ts
+// Variable: SOCIAL_QUERY
+// Query: *[_type == "social"] | order(_createdAt desc) {        _id,        name,        url    }
+export type SOCIAL_QUERY_RESULT = Array<{
+  _id: string;
+  name: string | null;
+  url: string | null;
+}>;
+
 // Query TypeMap
 import "@sanity/client";
 declare module "@sanity/client" {
   interface SanityQueries {
     '\n    *[_type == "cancellationPolicy"]{\n        _id,\n        title,\n        description,\n        icon,\n    }\n': CANCELLATION_POLICY_QUERY_RESULT;
     '\n    *[_type == "category"] | order(_createdAt desc) {\n        _id,\n        name,\n        "slug": slug.current\n    }\n': CATEGORIES_QUERY_RESULT;
+    '\n*[_type == "faq"] | order(_createdAt asc) {\n_id,\n  question,\n  answer\n}\n': FAQ_QUERY_RESULT;
     '\n*[_type == "gallery"] | order(_createdAt asc){\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': GALLERY_QUERY_RESULT;
     '\n*[_type == "gallery"\n && featured == true\n  && (!defined($category) || category->slug.current == $category)\n]\n| order(_createdAt asc)\n[$start...$end]{\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': FEATURED_GALLERY_QUERY_RESULT;
     '\n    *[_type == "hero"] | order(_createdAt desc) {\n        _id,\n        "image": image.asset->url,\n        alt\n    }\n': HERO_QUERY_RESULT;
     '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': REVIEW_QUERY_RESULT;
+    '\n    *[_type == "social"] | order(_createdAt desc) {\n        _id,\n        name,\n        url\n    }\n': SOCIAL_QUERY_RESULT;
   }
 }

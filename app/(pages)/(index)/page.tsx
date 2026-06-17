@@ -1,16 +1,17 @@
 import { HeroComp } from "./components/hero";
 import { DiscoverComp } from "./components/discover";
-import { ServicesComp } from "./components/services";
+
 import { GalleryComp } from "./components/gallery";
 import { ReviewsComp } from "./components/reviews";
 import { CTA } from "@/components/shared/cta";
+import { ConsultationsComp } from "./components/services";
 
 export default function Home() {
   return (
     <div className="flex-1 overflow-x-clip">
       <HeroComp />
       <DiscoverComp />
-      <ServicesComp />
+      <ConsultationsComp />
       <GalleryComp />
       <ReviewsComp />
       <CTA

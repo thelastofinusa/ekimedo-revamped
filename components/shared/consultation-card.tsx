@@ -1,19 +1,20 @@
-import { ConsultationDataType } from "@/constants/consultation";
 import { formatDuration, formatPrice } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { ChevronRightIcon, CheckCheckIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
+import { CONSULTATION_QUERY_RESULT } from "@/sanity.types";
+import { Skeleton } from "../ui/skeleton";
 
 export const ConsultationCard: React.FC<{
-  data: ConsultationDataType[number];
+  data: CONSULTATION_QUERY_RESULT[number];
 }> = ({ data }) => {
   return (
     <div className="flex flex-col items-center justify-start gap-4 md:gap-6 lg:flex-row lg:gap-8 lg:even:flex-row-reverse xl:gap-10">
       <div className="bg-secondary relative aspect-[1.3] w-full flex-1 shadow-xs">
         <Image
-          src={data.image ? `/assets/hero/${data.image}` : "/placeholder.svg"}
+          src={data.image || "/placeholder.svg"}
           alt={data.title || "Service title"}
           fill
           priority
@@ -79,6 +80,55 @@ export const ConsultationCard: React.FC<{
             className="transition-transform group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1"
           />
         </Link>
+      </div>
+    </div>
+  );
+};
+
+export const ConsultationCardLoading = () => {
+  return (
+    <div className="flex flex-col items-center justify-start gap-4 md:gap-6 lg:flex-row lg:gap-8 lg:even:flex-row-reverse xl:gap-10">
+      <Skeleton className="aspect-[1.3] w-full flex-1" />
+      <div className="flex flex-1 flex-col gap-6 md:gap-8">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-14" />
+          <Skeleton className="size-4" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+
+        <div className="flex flex-col gap-2 md:gap-3">
+          <Skeleton className="h-6 w-72" />
+          <div className="flex max-w-xl flex-col gap-1.5">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-[80%]" />
+            <Skeleton className="h-3 w-[95%]" />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <Skeleton className="h-4 w-30" />
+
+          <ul className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+          </ul>
+        </div>
+
+        <Skeleton className="h-12 w-52" />
       </div>
     </div>
   );

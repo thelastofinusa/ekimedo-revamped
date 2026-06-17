@@ -2,7 +2,9 @@ import { Metadata } from "next";
 import { siteConfig } from "@/config/site.config";
 import { HeroComp } from "@/components/shared/hero";
 import { Consultations } from "./components/consultations";
-import { consultationsData } from "@/constants/consultation";
+import { CONSULTATION_QUERY } from "@/sanity/queries/consultation.query";
+import { client, clientOptions } from "@/sanity/lib/client";
+import { sanityFetch } from "@/sanity/lib/live";
 
 export const metadata: Metadata = {
   title: "Book a Consultation",
@@ -37,6 +39,15 @@ export default async function BookConsultation(
   props: PageProps<"/book-consultation/[type]">,
 ) {
   const { success, canceled } = await props.searchParams;
+  // const consultations = await client.fetch(
+  //   CONSULTATION_QUERY,
+  //   { onPMPage: false },
+  //   clientOptions,
+  // );
+  const { data: consultations } = await sanityFetch({
+    query: CONSULTATION_QUERY,
+    params: { onPMPage: false, slug: null },
+  });
 
   const messageType =
     success === "true" ? "success" : canceled === "true" ? "canceled" : null;
@@ -56,7 +67,7 @@ export default async function BookConsultation(
         imagePath="consultation.png"
       />
 
-      <Consultations data={consultationsData} messageType={messageType} />
+      <Consultations data={consultations} messageType={messageType} />
     </div>
   );
 }

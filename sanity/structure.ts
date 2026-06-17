@@ -7,12 +7,12 @@ export const structure: StructureResolver = (S) =>
     .title(siteConfig.title)
     .items([
       // Shop
+      S.documentTypeListItem("consultation"), // ✅
       S.documentTypeListItem("category"), // ✅
 
       S.divider(),
 
       // Content
-      S.documentTypeListItem("hero"), // ✅
       S.listItem()
         .title("Gallery")
         .child(
@@ -65,7 +65,8 @@ export const structure: StructureResolver = (S) =>
                     .filter(`_type == "gallery" && featured == true`),
                 ),
             ]),
-        ),
+        ), // ✅
+      S.documentTypeListItem("hero"), // ✅
       S.documentTypeListItem("testimonial"), // ✅
       S.documentTypeListItem("social"), // ✅
 

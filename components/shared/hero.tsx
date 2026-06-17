@@ -10,12 +10,15 @@ export const HeroComp: React.FC<{
   description?: string | React.ReactElement;
   imagePath?: string;
   comp?: React.ReactElement;
-}> = ({ title, description, imagePath, comp }) => {
-  const imageSrc = imagePath?.startsWith("/")
+  isDynamic?: boolean;
+}> = ({ title, description, imagePath, comp, isDynamic = false }) => {
+  const imageSrc = isDynamic
     ? imagePath
-    : imagePath
-      ? `/assets/hero/${imagePath}`
-      : undefined;
+    : imagePath?.startsWith("/")
+      ? imagePath
+      : imagePath
+        ? `/assets/hero/${imagePath}`
+        : undefined;
 
   return (
     <div className="bg-foreground relative overflow-hidden py-24">

@@ -15,6 +15,163 @@
 export declare const internalGroqTypeReferenceTo: unique symbol;
 
 // Source: schema.json
+export type FieldRange = {
+  _type: "fieldRange";
+  from?: number;
+  to?: number;
+};
+
+export type FieldItem = {
+  _type: "fieldItem";
+  id?: string;
+  title?: string;
+  description?: string;
+  range?: FieldRange;
+};
+
+export type FieldInterest = {
+  _type: "fieldInterest";
+  id?: string;
+  label?: string;
+  description?: string;
+};
+
+export type FieldOption = {
+  _type: "fieldOption";
+  id?: string;
+  label?: string;
+  description?: string;
+  interests?: Array<
+    {
+      _key: string;
+    } & FieldInterest
+  >;
+};
+
+export type FieldIcons = {
+  _type: "fieldIcons";
+  start?: string;
+  end?: string;
+};
+
+export type FieldDescription = {
+  _type: "fieldDescription";
+  value?: string;
+  path?: string;
+  newTab?: boolean;
+};
+
+export type FormField = {
+  _type: "formField";
+  name?: string;
+  type?:
+    | "text"
+    | "email"
+    | "tel"
+    | "number"
+    | "date"
+    | "datetime-local"
+    | "textarea"
+    | "select"
+    | "checkbox"
+    | "radio"
+    | "file"
+    | "size";
+  label?: string;
+  placeholder?: string;
+  description?: FieldDescription;
+  required?: boolean;
+  errMsg?: string;
+  group?: string;
+  defaultValue?: string;
+  min?: number;
+  max?: number;
+  size?: number;
+  icons?: FieldIcons;
+  options?: Array<
+    {
+      _key: string;
+    } & FieldOption
+  >;
+  items?: Array<
+    {
+      _key: string;
+    } & FieldItem
+  >;
+  sizes?: Array<string>;
+};
+
+export type FormCard = {
+  _type: "formCard";
+  title?: string;
+  id?: Slug;
+  info?: string;
+  description?: string;
+  fields?: Array<
+    {
+      _key: string;
+    } & FormField
+  >;
+};
+
+export type SanityImageAssetReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
+};
+
+export type Consultation = {
+  _id: string;
+  _type: "consultation";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: string;
+  slug?: Slug;
+  description?: string;
+  duration?: number;
+  price?: number;
+  dresses?: number;
+  image?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    _type: "image";
+  };
+  includes?: Array<string>;
+  formCards?: Array<
+    {
+      _key: string;
+    } & FormCard
+  >;
+  order?: number;
+  onPMPage?: boolean;
+};
+
+export type Slug = {
+  _type: "slug";
+  current?: string;
+  source?: string;
+};
+
+export type SanityImageCrop = {
+  _type: "sanity.imageCrop";
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+};
+
+export type SanityImageHotspot = {
+  _type: "sanity.imageHotspot";
+  x?: number;
+  y?: number;
+  height?: number;
+  width?: number;
+};
+
 export type BusinessHours = {
   _id: string;
   _type: "businessHours";
@@ -81,13 +238,6 @@ export type Permissions = {
   customerEmail?: string;
 };
 
-export type SanityImageAssetReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
-};
-
 export type Testimonial = {
   _id: string;
   _type: "testimonial";
@@ -115,22 +265,6 @@ export type Testimonial = {
     _type: "asset";
     _key: string;
   }>;
-};
-
-export type SanityImageCrop = {
-  _type: "sanity.imageCrop";
-  top?: number;
-  bottom?: number;
-  left?: number;
-  right?: number;
-};
-
-export type SanityImageHotspot = {
-  _type: "sanity.imageHotspot";
-  x?: number;
-  y?: number;
-  height?: number;
-  width?: number;
 };
 
 export type Hero = {
@@ -192,12 +326,6 @@ export type Category = {
   _rev: string;
   name?: string;
   slug?: Slug;
-};
-
-export type Slug = {
-  _type: "slug";
-  current?: string;
-  source?: string;
 };
 
 export type SanityImagePaletteSwatch = {
@@ -298,21 +426,30 @@ export type Geopoint = {
 };
 
 export type AllSanitySchemaTypes =
+  | FieldRange
+  | FieldItem
+  | FieldInterest
+  | FieldOption
+  | FieldIcons
+  | FieldDescription
+  | FormField
+  | FormCard
+  | SanityImageAssetReference
+  | Consultation
+  | Slug
+  | SanityImageCrop
+  | SanityImageHotspot
   | BusinessHours
   | PricingTier
   | Faq
   | Social
   | Permissions
-  | SanityImageAssetReference
   | Testimonial
-  | SanityImageCrop
-  | SanityImageHotspot
   | Hero
   | CancellationPolicy
   | CategoryReference
   | Gallery
   | Category
-  | Slug
   | SanityImagePaletteSwatch
   | SanityImagePalette
   | SanityImageDimensions
@@ -322,7 +459,7 @@ export type AllSanitySchemaTypes =
   | SanityImageAsset
   | Geopoint;
 
-// Source: sanity/queries/cancellation-policy.query.ts
+// Source: sanity/queries/cancellationPolicy.query.ts
 // Variable: CANCELLATION_POLICY_QUERY
 // Query: *[_type == "cancellationPolicy"]{        _id,        title,        description,        icon,    }
 export type CANCELLATION_POLICY_QUERY_RESULT = Array<{
@@ -340,6 +477,162 @@ export type CATEGORIES_QUERY_RESULT = Array<{
   name: string | null;
   slug: string | null;
 }>;
+
+// Source: sanity/queries/consultation.query.ts
+// Variable: CONSULTATION_QUERY
+// Query: *[  _type == "consultation" &&  onPMPage == $onPMPage] | order(order asc, _createdAt asc) {  _id,  title,  "slug": slug.current,  description,  duration,  price,  dresses,  order,  onPMPage,  "image": image.asset->url,  includes[],  formCards[] {    title,    "id": id.current,    info,    description,    fields[] {      name,      type,      label,      placeholder,      description {        value,        path,        newTab      },      required,      errMsg,      group,      defaultValue,      min,      max,      size,      icons {        start,        end      },      sizes[],      options[] {        id,        label,        description,        interests[] {          id,          label,          description        }      },      items[] {        id,        title,        description,        range {          from,          to        }      }    }  }}
+export type CONSULTATION_QUERY_RESULT = Array<{
+  _id: string;
+  title: string | null;
+  slug: string | null;
+  description: string | null;
+  duration: number | null;
+  price: number | null;
+  dresses: number | null;
+  order: number | null;
+  onPMPage: boolean | null;
+  image: string | null;
+  includes: Array<string> | null;
+  formCards: Array<{
+    title: string | null;
+    id: string | null;
+    info: string | null;
+    description: string | null;
+    fields: Array<{
+      name: string | null;
+      type:
+        | "checkbox"
+        | "date"
+        | "datetime-local"
+        | "email"
+        | "file"
+        | "number"
+        | "radio"
+        | "select"
+        | "size"
+        | "tel"
+        | "text"
+        | "textarea"
+        | null;
+      label: string | null;
+      placeholder: string | null;
+      description: {
+        value: string | null;
+        path: string | null;
+        newTab: boolean | null;
+      } | null;
+      required: boolean | null;
+      errMsg: string | null;
+      group: string | null;
+      defaultValue: string | null;
+      min: number | null;
+      max: number | null;
+      size: number | null;
+      icons: {
+        start: string | null;
+        end: string | null;
+      } | null;
+      sizes: Array<string> | null;
+      options: Array<{
+        id: string | null;
+        label: string | null;
+        description: string | null;
+        interests: Array<{
+          id: string | null;
+          label: string | null;
+          description: string | null;
+        }> | null;
+      }> | null;
+      items: Array<{
+        id: string | null;
+        title: string | null;
+        description: string | null;
+        range: {
+          from: number | null;
+          to: number | null;
+        } | null;
+      }> | null;
+    }> | null;
+  }> | null;
+}>;
+
+// Source: sanity/queries/consultation.query.ts
+// Variable: CONSULTATION_BY_SLUG_QUERY
+// Query: *[  _type == "consultation" &&  slug.current == $slug][0] {  _id,  title,  "slug": slug.current,  description,  duration,  price,  dresses,  order,  onPMPage,  "image": image.asset->url,  includes[],  formCards[] {    title,    "id": id.current,    info,    description,    fields[] {      name,      type,      label,      placeholder,      description {        value,        path,        newTab      },      required,      errMsg,      group,      defaultValue,      min,      max,      size,      icons {        start,        end      },      sizes[],      options[] {        id,        label,        description,        interests[] {          id,          label,          description        }      },      items[] {        id,        title,        description,        range {          from,          to        }      }    }  }}
+export type CONSULTATION_BY_SLUG_QUERY_RESULT = {
+  _id: string;
+  title: string | null;
+  slug: string | null;
+  description: string | null;
+  duration: number | null;
+  price: number | null;
+  dresses: number | null;
+  order: number | null;
+  onPMPage: boolean | null;
+  image: string | null;
+  includes: Array<string> | null;
+  formCards: Array<{
+    title: string | null;
+    id: string | null;
+    info: string | null;
+    description: string | null;
+    fields: Array<{
+      name: string | null;
+      type:
+        | "checkbox"
+        | "date"
+        | "datetime-local"
+        | "email"
+        | "file"
+        | "number"
+        | "radio"
+        | "select"
+        | "size"
+        | "tel"
+        | "text"
+        | "textarea"
+        | null;
+      label: string | null;
+      placeholder: string | null;
+      description: {
+        value: string | null;
+        path: string | null;
+        newTab: boolean | null;
+      } | null;
+      required: boolean | null;
+      errMsg: string | null;
+      group: string | null;
+      defaultValue: string | null;
+      min: number | null;
+      max: number | null;
+      size: number | null;
+      icons: {
+        start: string | null;
+        end: string | null;
+      } | null;
+      sizes: Array<string> | null;
+      options: Array<{
+        id: string | null;
+        label: string | null;
+        description: string | null;
+        interests: Array<{
+          id: string | null;
+          label: string | null;
+          description: string | null;
+        }> | null;
+      }> | null;
+      items: Array<{
+        id: string | null;
+        title: string | null;
+        description: string | null;
+        range: {
+          from: number | null;
+          to: number | null;
+        } | null;
+      }> | null;
+    }> | null;
+  }> | null;
+} | null;
 
 // Source: sanity/queries/faq.query.ts
 // Variable: FAQ_QUERY
@@ -461,6 +754,8 @@ declare module "@sanity/client" {
   interface SanityQueries {
     '\n    *[_type == "cancellationPolicy"]{\n        _id,\n        title,\n        description,\n        icon,\n    }\n': CANCELLATION_POLICY_QUERY_RESULT;
     '\n    *[_type == "category"] | order(_createdAt desc) {\n        _id,\n        name,\n        "slug": slug.current\n    }\n': CATEGORIES_QUERY_RESULT;
+    '\n*[\n  _type == "consultation" &&\n  onPMPage == $onPMPage\n] | order(order asc, _createdAt asc) {\n  _id,\n  title,\n  "slug": slug.current,\n  description,\n  duration,\n  price,\n  dresses,\n  order,\n  onPMPage,\n\n  "image": image.asset->url,\n\n  includes[],\n\n  formCards[] {\n    title,\n    "id": id.current,\n    info,\n    description,\n\n    fields[] {\n      name,\n      type,\n      label,\n      placeholder,\n\n      description {\n        value,\n        path,\n        newTab\n      },\n\n      required,\n      errMsg,\n      group,\n      defaultValue,\n      min,\n      max,\n      size,\n\n      icons {\n        start,\n        end\n      },\n\n      sizes[],\n\n      options[] {\n        id,\n        label,\n        description,\n\n        interests[] {\n          id,\n          label,\n          description\n        }\n      },\n\n      items[] {\n        id,\n        title,\n        description,\n\n        range {\n          from,\n          to\n        }\n      }\n    }\n  }\n}\n': CONSULTATION_QUERY_RESULT;
+    '\n*[\n  _type == "consultation" &&\n  slug.current == $slug\n][0] {\n  _id,\n  title,\n  "slug": slug.current,\n  description,\n  duration,\n  price,\n  dresses,\n  order,\n  onPMPage,\n\n  "image": image.asset->url,\n\n  includes[],\n\n  formCards[] {\n    title,\n    "id": id.current,\n    info,\n    description,\n\n    fields[] {\n      name,\n      type,\n      label,\n      placeholder,\n\n      description {\n        value,\n        path,\n        newTab\n      },\n\n      required,\n      errMsg,\n      group,\n      defaultValue,\n      min,\n      max,\n      size,\n\n      icons {\n        start,\n        end\n      },\n\n      sizes[],\n\n      options[] {\n        id,\n        label,\n        description,\n\n        interests[] {\n          id,\n          label,\n          description\n        }\n      },\n\n      items[] {\n        id,\n        title,\n        description,\n\n        range {\n          from,\n          to\n        }\n      }\n    }\n  }\n}\n': CONSULTATION_BY_SLUG_QUERY_RESULT;
     '\n*[_type == "faq"] | order(_createdAt asc) {\n_id,\n  question,\n  answer\n}\n': FAQ_QUERY_RESULT;
     '\n*[_type == "gallery"] | order(_createdAt asc){\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': GALLERY_QUERY_RESULT;
     '\n*[_type == "gallery"\n && featured == true\n  && (!defined($category) || category->slug.current == $category)\n]\n| order(_createdAt asc)\n[$start...$end]{\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': FEATURED_GALLERY_QUERY_RESULT;

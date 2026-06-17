@@ -4,7 +4,7 @@ import { Policy } from "./component/policy";
 import { siteConfig } from "@/config/site.config";
 import { HeroComp } from "@/components/shared/hero";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { CANCELLATION_POLICY_QUERY } from "@/sanity/queries/cancellation-policy.query";
+import { CANCELLATION_POLICY_QUERY } from "@/sanity/queries/cancellationPolicy.query";
 
 export const metadata: Metadata = {
   title: "Contact Us",

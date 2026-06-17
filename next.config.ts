@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
         pathname: `/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_DATASET}/**`,
       },
     ],
+    unoptimized: true,
     qualities: [100, 80],
     formats: ["image/webp", "image/avif"],
   },

@@ -41,11 +41,7 @@ export function ContactEmail({
         <Body className="bg-zinc-100 py-10 font-sans">
           <Container className="mx-auto max-w-2xl rounded-xl border border-zinc-200 bg-white p-10">
             {/* Logo */}
-            <Img
-              src={`${siteConfig.url}/assets/logo/horizontal-charcoal.png`}
-              alt="Ekimedo"
-              width="140"
-            />
+            <Img src="cid:logo" alt={siteConfig.author.fullName} width="140" />
 
             {/* Heading */}
             <Heading className="m-0 text-2xl font-bold text-zinc-950">

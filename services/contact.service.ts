@@ -1,5 +1,5 @@
 import { zSchema, ZSchemaType } from "@/lib/validators";
-import { resend } from "@/lib/resend";
+import { logoBase64, resend } from "@/lib/resend";
 import { ContactEmail } from "@/components/emails/contact.email";
 
 export async function createContactMessageService(
@@ -31,6 +31,13 @@ export async function createContactMessageService(
         inquiryType,
         message,
       }),
+      attachments: [
+        {
+          filename: "logo.png",
+          content: logoBase64,
+          contentId: "logo",
+        },
+      ],
     });
 
     return {

@@ -71,7 +71,9 @@ export const structure: StructureResolver = (S) =>
 
       S.divider(),
       // Settings
+      S.documentTypeListItem("pricingTier"), // ✅
       S.documentTypeListItem("cancellationPolicy"), // ✅
-      S.documentTypeListItem("permissions"), // ✅
+      S.documentTypeListItem("businessHours"), // ✅
       S.documentTypeListItem("faq"), // ✅
+      S.documentTypeListItem("permissions"), // ✅
     ]);

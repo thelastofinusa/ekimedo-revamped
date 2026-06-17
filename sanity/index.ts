@@ -7,6 +7,8 @@ import { reviewType } from "./schema/review.schema";
 import { permissionType } from "./schema/permission.schema";
 import { socialType } from "./schema/social.schema";
 import { faqType } from "./schema/faq.schema";
+import { pricingTierType } from "./schema/pricing.schema";
+import { businessHoursType } from "./schema/hours.schema";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -18,5 +20,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     permissionType,
     socialType,
     faqType,
+    pricingTierType,
+    businessHoursType,
   ],
 };

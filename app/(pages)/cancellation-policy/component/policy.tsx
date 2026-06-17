@@ -1,9 +1,9 @@
 "use client";
 import { motion } from "motion/react";
-import * as LucideIcons from "lucide-react";
 
 import { Container } from "@/components/shared/container";
 import { CANCELLATION_POLICY_QUERY_RESULT } from "@/sanity.types";
+import { getIcon } from "@/lib/utils";
 
 export const Policy: React.FC<{
   policies: CANCELLATION_POLICY_QUERY_RESULT;
@@ -13,11 +13,7 @@ export const Policy: React.FC<{
       <Container size="xs" className="flex flex-col gap-6">
         <div className="bg-card border-border grid h-auto gap-6 overflow-hidden rounded-md border p-6 text-sm shadow-xs md:gap-8 md:p-8 xl:gap-12 xl:p-12">
           {policies.map((policy, index) => {
-            const Icon = policy.icon
-              ? (LucideIcons[
-                  policy.icon as keyof typeof LucideIcons
-                ] as React.ComponentType<{ className?: string }>)
-              : LucideIcons.CircleAlert;
+            const Icon = getIcon(policy.icon);
 
             return (
               <motion.div
@@ -29,7 +25,7 @@ export const Policy: React.FC<{
                 className="group flex gap-6"
               >
                 <div className="bg-primary-foreground text-primary flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors duration-300">
-                  <Icon />
+                  {Icon && <Icon className="size-5" />}
                 </div>
                 <div className="flex flex-col gap-2">
                   <h3 className="text-xl font-medium tracking-tight">

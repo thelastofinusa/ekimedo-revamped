@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/shared/container";
-import { getSocialIcon } from "@/components/shared/footer";
 import { zSchema, ZSchemaType } from "@/lib/validators";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -43,6 +42,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { getIcon } from "@/lib/utils";
 
 export const ContactForm: React.FC<{
   categories: CATEGORIES_QUERY_RESULT;
@@ -155,9 +155,7 @@ export const ContactForm: React.FC<{
                 <div className="flex items-center gap-2.5">
                   {socialHandles &&
                     socialHandles.map((social) => {
-                      const Icon = getSocialIcon(
-                        social.name?.toLowerCase() || "",
-                      ) as IconType;
+                      const Icon = getIcon(social.icon);
 
                       return (
                         <Tooltip key={social._id}>
@@ -173,7 +171,9 @@ export const ContactForm: React.FC<{
                                 className: "group",
                               })}
                             >
-                              <Icon className="text-background group-hover:text-foreground!" />
+                              {Icon && (
+                                <Icon className="text-background group-hover:text-foreground!" />
+                              )}
                             </a>
                           </TooltipTrigger>
                           <TooltipContent

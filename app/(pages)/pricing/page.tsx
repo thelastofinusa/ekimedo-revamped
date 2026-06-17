@@ -4,6 +4,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { siteConfig } from "@/config/site.config";
 import { formatPrice } from "@/lib/format";
+import { client, clientOptions } from "@/sanity/lib/client";
+import { PRICING_TIERS_QUERY } from "@/sanity/queries/pricing.query";
 import {
   CheckCheckIcon,
   RulerIcon,
@@ -42,66 +44,13 @@ export const metadata: Metadata = {
   },
 };
 
-export const pricingTiers = [
-  {
-    name: "Pre-Made Collection",
-    price: 1500,
-    description:
-      "Elegant ready-to-wear designs crafted with premium materials and available with minor fitting adjustments.",
-    features: [
-      "Ready-to-wear designs",
-      "Standard sizing options",
-      "Minor alterations available",
-      "Premium fabrics",
-      "Professional finishing",
-      "Fast delivery timeline",
-    ],
-  },
-  {
-    name: "Signature Custom",
-    price: 3500,
-    description:
-      "A fully customized gown tailored to your measurements, style preferences, and event requirements.",
-    features: [
-      "Personal design consultation",
-      "Custom measurements",
-      "Fabric selection guidance",
-      "Up to 2 fitting sessions",
-      "Custom embellishments",
-      "Dedicated design support",
-    ],
-  },
-  {
-    name: "Luxury Bridal",
-    price: 6500,
-    description:
-      "Designed for brides seeking exceptional craftsmanship, intricate detailing, and a one-of-a-kind wedding gown.",
-    features: [
-      "Exclusive bridal consultation",
-      "Premium lace and silk options",
-      "Hand-applied embellishments",
-      "Multiple fitting appointments",
-      "Custom train and veil options",
-      "Priority production schedule",
-    ],
-  },
-  {
-    name: "Couture Collection",
-    price: 12000,
-    description:
-      "The pinnacle of bespoke fashion, featuring intricate handwork, luxury materials, and atelier-level craftsmanship.",
-    features: [
-      "Completely bespoke design",
-      "Luxury imported fabrics",
-      "Extensive hand beading",
-      "Unlimited design revisions",
-      "White-glove service",
-      "VIP priority production",
-    ],
-  },
-];
+export default async function Pricing() {
+  const pricingTiers = await client.fetch(
+    PRICING_TIERS_QUERY,
+    {},
+    clientOptions,
+  );
 
-export default function Pricing() {
   return (
     <div className="flex-1 overflow-x-clip">
       <HeroComp

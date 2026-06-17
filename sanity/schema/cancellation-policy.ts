@@ -1,6 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { AiOutlineAlert } from "react-icons/ai";
-import { LucideIconInput } from "../components/LucideIconInput";
+import { ReactIconsIconInput } from "../components/ReactIconsIconInput";
 
 export const cancellationPolicyType = defineType({
   name: "cancellationPolicy",
@@ -25,7 +25,7 @@ export const cancellationPolicyType = defineType({
       type: "string",
       placeholder: "Search for icon..",
       components: {
-        input: LucideIconInput,
+        input: ReactIconsIconInput,
       },
       validation: (rule) => rule.required(),
     }),

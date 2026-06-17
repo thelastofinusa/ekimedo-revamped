@@ -15,6 +15,41 @@
 export declare const internalGroqTypeReferenceTo: unique symbol;
 
 // Source: schema.json
+export type BusinessHours = {
+  _id: string;
+  _type: "businessHours";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  hours?: Array<{
+    day?:
+      | "Monday"
+      | "Tuesday"
+      | "Wednesday"
+      | "Thursday"
+      | "Friday"
+      | "Saturday"
+      | "Sunday";
+    isOpen?: boolean;
+    startTime?: string;
+    endTime?: string;
+    _key: string;
+  }>;
+};
+
+export type PricingTier = {
+  _id: string;
+  _type: "pricingTier";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name?: string;
+  price?: number;
+  description?: string;
+  features?: Array<string>;
+  order?: number;
+};
+
 export type Faq = {
   _id: string;
   _type: "faq";
@@ -263,6 +298,8 @@ export type Geopoint = {
 };
 
 export type AllSanitySchemaTypes =
+  | BusinessHours
+  | PricingTier
   | Faq
   | Social
   | Permissions
@@ -350,6 +387,50 @@ export type HERO_QUERY_RESULT = Array<{
   alt: string | null;
 }>;
 
+// Source: sanity/queries/hours.query.ts
+// Variable: BUSINESS_HOUR_QUERY
+// Query: *[_type == "businessHours"]{  hours[]}[0]
+export type BUSINESS_HOUR_QUERY_RESULT = {
+  hours: Array<{
+    day?:
+      | "Friday"
+      | "Monday"
+      | "Saturday"
+      | "Sunday"
+      | "Thursday"
+      | "Tuesday"
+      | "Wednesday";
+    isOpen?: boolean;
+    startTime?: string;
+    endTime?: string;
+    _key: string;
+  }> | null;
+} | null;
+
+// Source: sanity/queries/permission.query.ts
+// Variable: REVIEW_PERMISSION_QUERY
+// Query: *[_type == "permissions" && lower(customerEmail) == lower($email)][0]
+export type REVIEW_PERMISSION_QUERY_RESULT = {
+  _id: string;
+  _type: "permissions";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  customerName?: string;
+  customerEmail?: string;
+} | null;
+
+// Source: sanity/queries/pricing.query.ts
+// Variable: PRICING_TIERS_QUERY
+// Query: *[_type == "pricingTier"] | order(order asc, _createdAt asc) {  _id,  name,  price,  description,  features}
+export type PRICING_TIERS_QUERY_RESULT = Array<{
+  _id: string;
+  name: string | null;
+  price: number | null;
+  description: string | null;
+  features: Array<string> | null;
+}>;
+
 // Source: sanity/queries/review.query.ts
 // Variable: REVIEW_QUERY
 // Query: *[_type == "testimonial" && status == "approved"] | order(date desc) {    _id,    "avatar": avatar.asset->url,    service,    date,    name,    rating,    review,    "workAssets": workAssets[].asset->url}
@@ -366,11 +447,12 @@ export type REVIEW_QUERY_RESULT = Array<{
 
 // Source: sanity/queries/socials.query.ts
 // Variable: SOCIAL_QUERY
-// Query: *[_type == "social"] | order(_createdAt desc) {        _id,        name,        url    }
+// Query: *[_type == "social"] | order(_createdAt desc) {        _id,        name,        url,        icon    }
 export type SOCIAL_QUERY_RESULT = Array<{
   _id: string;
   name: string | null;
   url: string | null;
+  icon: string | null;
 }>;
 
 // Query TypeMap
@@ -383,7 +465,10 @@ declare module "@sanity/client" {
     '\n*[_type == "gallery"] | order(_createdAt asc){\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': GALLERY_QUERY_RESULT;
     '\n*[_type == "gallery"\n && featured == true\n  && (!defined($category) || category->slug.current == $category)\n]\n| order(_createdAt asc)\n[$start...$end]{\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': FEATURED_GALLERY_QUERY_RESULT;
     '\n    *[_type == "hero"] | order(_createdAt desc) {\n        _id,\n        "image": image.asset->url,\n        alt\n    }\n': HERO_QUERY_RESULT;
+    '\n    *[_type == "businessHours"]{\n  hours[]\n}[0]\n': BUSINESS_HOUR_QUERY_RESULT;
+    '*[_type == "permissions" && lower(customerEmail) == lower($email)][0]': REVIEW_PERMISSION_QUERY_RESULT;
+    '\n*[_type == "pricingTier"] | order(order asc, _createdAt asc) {\n  _id,\n  name,\n  price,\n  description,\n  features\n}\n': PRICING_TIERS_QUERY_RESULT;
     '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': REVIEW_QUERY_RESULT;
-    '\n    *[_type == "social"] | order(_createdAt desc) {\n        _id,\n        name,\n        url\n    }\n': SOCIAL_QUERY_RESULT;
+    '\n    *[_type == "social"] | order(_createdAt desc) {\n        _id,\n        name,\n        url,\n        icon\n    }\n': SOCIAL_QUERY_RESULT;
   }
 }

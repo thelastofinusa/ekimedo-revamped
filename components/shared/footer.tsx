@@ -1,102 +1,25 @@
 import Link from "next/link";
 import { RiVisaLine } from "react-icons/ri";
 import { FaApplePay, FaGooglePay, FaStripe } from "react-icons/fa";
-import {
-  FaFacebookF,
-  FaInstagram,
-  FaLink,
-  FaLinkedin,
-  FaTiktok,
-  FaXTwitter,
-} from "react-icons/fa6";
 
 import { Logo } from "./logo";
 import { Container } from "./container";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, getIcon } from "@/lib/utils";
 import { siteConfig } from "@/config/site.config";
 import { footerRoutes } from "@/constants/navigation";
 import { Route } from "next";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { IconType } from "react-icons/lib";
 import { client, clientOptions } from "@/sanity/lib/client";
 import { SOCIAL_QUERY } from "@/sanity/queries/socials.query";
-
-export const getSocialIcon = (name: string) => {
-  switch (name) {
-    case "instagram":
-      return FaInstagram;
-    case "facebook":
-      return FaFacebookF;
-    case "twitter":
-      return;
-    case "x":
-      return FaXTwitter;
-    case "linkedin":
-      return FaLinkedin;
-    case "tiktok":
-      return FaTiktok;
-
-    default:
-      return FaLink;
-  }
-};
-
-export const businessHours = {
-  hours: [
-    {
-      _key: "monday",
-      day: "Monday",
-      isOpen: true,
-      startTime: "09:00 AM",
-      endTime: "18:00 PM",
-    },
-    {
-      _key: "tuesday",
-      day: "Tuesday",
-      isOpen: true,
-      startTime: "09:00 AM",
-      endTime: "18:00 PM",
-    },
-    {
-      _key: "wednesday",
-      day: "Wednesday",
-      isOpen: true,
-      startTime: "09:00 AM",
-      endTime: "18:00 PM",
-    },
-    {
-      _key: "thursday",
-      day: "Thursday",
-      isOpen: true,
-      startTime: "09:00 AM",
-      endTime: "18:00 PM",
-    },
-    {
-      _key: "friday",
-      day: "Friday",
-      isOpen: true,
-      startTime: "09:00 AM",
-      endTime: "18:00 PM",
-    },
-    {
-      _key: "saturday",
-      day: "Saturday",
-      isOpen: true,
-      startTime: "10:00 AM",
-      endTime: "16:00 PM",
-    },
-    {
-      _key: "sunday",
-      day: "Sunday",
-      isOpen: false,
-      startTime: "",
-      endTime: "",
-    },
-  ],
-};
+import { BUSINESS_HOUR_QUERY } from "@/sanity/queries/hours.query";
 
 export const Footer = async () => {
+  const businessHours = await client.fetch(
+    BUSINESS_HOUR_QUERY,
+    {},
+    clientOptions,
+  );
   const socialHandles = await client.fetch(SOCIAL_QUERY, {}, clientOptions);
 
   // Utility to check if the day is "Today" for highlighting
@@ -147,9 +70,7 @@ export const Footer = async () => {
             <div className="flex items-center gap-2.5">
               {socialHandles &&
                 socialHandles.map((social) => {
-                  const Icon = getSocialIcon(
-                    social.name?.toLowerCase() || "",
-                  ) as IconType;
+                  const Icon = getIcon(social.icon);
 
                   return (
                     <Tooltip key={social._id}>
@@ -165,7 +86,9 @@ export const Footer = async () => {
                             className: "group",
                           })}
                         >
-                          <Icon className="text-background group-hover:text-foreground!" />
+                          {Icon && (
+                            <Icon className="text-background group-hover:text-foreground!" />
+                          )}
                         </a>
                       </TooltipTrigger>
                       <TooltipContent theme="light" align="start" side="bottom">

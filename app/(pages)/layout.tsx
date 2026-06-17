@@ -5,6 +5,7 @@ import { Header } from "@/components/shared/header";
 import { Footer } from "@/components/shared/footer";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { SanityLive } from "@/sanity/lib/live";
 
 export default function PagesLayout(props: LayoutProps<"/">) {
   return (
@@ -15,6 +16,7 @@ export default function PagesLayout(props: LayoutProps<"/">) {
       <Footer />
       {process.env.NODE_ENV === "production" && <Analytics />}
       <Toaster richColors theme="dark" duration={5000} />
+      <SanityLive />
     </TooltipProvider>
   );
 }

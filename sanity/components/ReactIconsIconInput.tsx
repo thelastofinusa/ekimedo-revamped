@@ -1,13 +1,13 @@
+import { iconRegistry } from "@/lib/icons-registry";
 import { Autocomplete, Box, Card, Flex, Text } from "@sanity/ui";
-import * as FaIcons from "react-icons/fa6";
+
 import { set, StringInputProps } from "sanity";
 
-const options = Object.keys(FaIcons)
-  .filter((key) => {
-    const Icon = FaIcons[key as keyof typeof FaIcons];
-
-    return typeof Icon === "function" && key !== "IconContext";
-  })
+const options = Object.keys(iconRegistry)
+  .filter(
+    (key) =>
+      typeof iconRegistry[key as keyof typeof iconRegistry] === "function",
+  )
   .map((name) => ({
     value: name,
     payload: name,
@@ -16,8 +16,7 @@ const options = Object.keys(FaIcons)
 export function ReactIconsIconInput(props: StringInputProps) {
   const { value, onChange } = props;
 
-  const Icon =
-    value && value in FaIcons ? FaIcons[value as keyof typeof FaIcons] : null;
+  const Icon = iconRegistry[value as keyof typeof iconRegistry];
 
   return (
     <Box>
@@ -27,7 +26,7 @@ export function ReactIconsIconInput(props: StringInputProps) {
         value={value}
         onChange={(val) => onChange(set(val))}
         renderOption={(option) => {
-          const Icon = FaIcons[option.value as keyof typeof FaIcons];
+          const Icon = iconRegistry[option.value as keyof typeof iconRegistry];
 
           return (
             <Flex align="center" gap={3}>

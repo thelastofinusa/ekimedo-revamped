@@ -7,6 +7,7 @@ import {
   ClerkLoading,
   SignInButton,
   UserButton,
+  useUser,
 } from "@clerk/nextjs";
 import {
   NavigationMenu,
@@ -34,9 +35,16 @@ import {
 import { Separator } from "../ui/separator";
 import { FORCE_ACTIVE_ROUTES } from "@/constants/others";
 import { Skeleton } from "@/components/ui/skeleton";
+import { client, clientOptions } from "@/sanity/lib/client";
+import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission.query";
 
 export const Header = () => {
   const pathname = usePathname();
+  const { user } = useUser();
+  const customerEmail =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses?.[0]?.emailAddress;
+  const [hasPermission, setHasPermission] = React.useState<boolean>(true);
 
   const isDynamicShopRoute =
     (pathname.startsWith("/shop/") && pathname !== "/shop") ||
@@ -95,6 +103,20 @@ export const Header = () => {
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     };
   }, [forceActive]);
+
+  React.useEffect(() => {
+    if (!customerEmail) return;
+
+    (async () => {
+      const result = await client.fetch(
+        REVIEW_PERMISSION_QUERY,
+        { email: customerEmail },
+        clientOptions,
+      );
+
+      setHasPermission(Boolean(result));
+    })();
+  }, [customerEmail]);
 
   return (
     <NavigationMenu
@@ -235,13 +257,15 @@ export const Header = () => {
 
                         <UserButton.Action label="manageAccount" />
 
-                        <UserButton.Link
-                          label="Write a Review"
-                          labelIcon={
-                            <SquarePenIcon className="text-foreground mt-0.5 size-3.5" />
-                          }
-                          href="/reviews/new"
-                        />
+                        {hasPermission && (
+                          <UserButton.Link
+                            label="Write a Review"
+                            labelIcon={
+                              <SquarePenIcon className="text-foreground mt-0.5 size-3.5" />
+                            }
+                            href="/reviews/new"
+                          />
+                        )}
 
                         <UserButton.Action label="signOut" />
                       </UserButton.MenuItems>

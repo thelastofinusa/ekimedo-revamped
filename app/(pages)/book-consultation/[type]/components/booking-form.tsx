@@ -41,13 +41,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePathname, useRouter } from "next/navigation";
+import { BsInfoCircleFill } from "react-icons/bs";
 
 export const BookingForm: React.FC<{
   consultation: CONSULTATION_BY_SLUG_QUERY_RESULT;
   paymentStatus?: "success" | "cancel" | "error" | null;
   bookingId?: string | null;
   consultationTitle?: string | null;
-}> = ({ consultation, paymentStatus, bookingId, consultationTitle }) => {
+}> = ({ consultation, paymentStatus, consultationTitle }) => {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -120,6 +121,7 @@ export const BookingForm: React.FC<{
   }, [consultation?.slug, form]);
 
   // Save form data to localStorage on changes
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValues = form.watch();
   React.useEffect(() => {
     const STORAGE_KEY = `booking-form-${consultation?.slug}`;
@@ -173,6 +175,7 @@ export const BookingForm: React.FC<{
 
         if (!result.success) {
           toast.error("Booking failed", { description: result.error });
+          form.setValue(payload.dateTime as string, "");
           return;
         }
 
@@ -193,14 +196,14 @@ export const BookingForm: React.FC<{
             });
             return;
           }
-          // // Clear saved data on successful submission
-          // localStorage.removeItem(`booking-form-${consultation?.slug}`);
 
           // Redirect to Stripe
           if (sessionUrl) {
             // Save the Stripe session ID on the booking
             await updateBookingWithSessionId(result.bookingId!, sessionId);
             window.location.href = sessionUrl;
+            localStorage.removeItem(`booking-form-${consultation?.slug}`);
+            form.reset();
           }
         }
       } catch (error) {
@@ -459,16 +462,17 @@ export const BookingForm: React.FC<{
                         <h2 className="mb-1 font-serif text-xl md:text-2xl">
                           {item.title}
                         </h2>
-                        <p className="text-muted-foreground mb-8 text-sm font-normal">
+                        <p className="text-muted-foreground mb-7 text-sm font-normal">
                           {item.description}
                         </p>
 
                         {item.info && (
-                          <Alert className="mb-8 w-full border-blue-500/80 bg-blue-500/5 text-blue-500">
-                            <AlertTitle className="tracking-wider">
-                              <span>{item.info}</span>
-                            </AlertTitle>
-                          </Alert>
+                          <div className="text-primary mb-8 flex items-start gap-2">
+                            <BsInfoCircleFill className="mt-0.5 size-4" />
+                            <p className="flex-1 text-[13px] font-medium">
+                              {item.info}
+                            </p>
+                          </div>
                         )}
 
                         {renderFieldsWithGroups(

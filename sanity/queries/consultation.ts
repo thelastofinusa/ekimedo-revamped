@@ -3,7 +3,7 @@ import { defineQuery } from "next-sanity";
 export const CONSULTATION_QUERY = defineQuery(`
 *[
   _type == "consultation" &&
-  onPMPage == $onPMPage
+  ($onPMPage == null || onPMPage == $onPMPage)
 ] | order(order asc, _createdAt asc) {
   _id,
   title,

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
           location: "in-person",
           calendarUrl: "https://calendar.google.com/...",
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
-          socialLinks: socialHandles,
+          socialHandles,
         }),
       });
     } catch (error) {

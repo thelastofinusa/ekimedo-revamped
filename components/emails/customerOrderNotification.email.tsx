@@ -65,7 +65,7 @@ export const CustomerOrderNotificationEmail = (
                     alt={item.name}
                     width="70"
                     height="60"
-                    className="rounded-md"
+                    className="rounded-md object-cover"
                   />
                 </td>
 

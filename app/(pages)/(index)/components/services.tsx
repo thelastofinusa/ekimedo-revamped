@@ -12,7 +12,7 @@ import { CONSULTATION_QUERY } from "@/sanity/queries/consultation";
 export const ConsultationsComp = async () => {
   const consultations = await client.fetch(
     CONSULTATION_QUERY,
-    { onPMPage: false, slug: null },
+    { onPMPage: null },
     clientOptions,
   );
 

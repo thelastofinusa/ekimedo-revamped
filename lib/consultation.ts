@@ -114,6 +114,33 @@ const fieldToZod = (field: FormField) => {
   return schema.optional();
 };
 
+export function resolveFieldValue(field: FormField, raw: unknown): string {
+  switch (field.type) {
+    case "select":
+    case "radio": {
+      const opt = field.options?.find((o) => o.id === raw);
+      return opt?.label ?? String(raw);
+    }
+    case "checkbox": {
+      const ids = Array.isArray(raw) ? raw : [raw];
+      return ids
+        .map((id) => field.options?.find((o) => o.id === id)?.label ?? id)
+        .join(", ");
+    }
+    case "size": {
+      const item = field.items?.find((i) => i.id === raw);
+      return item?.title ?? String(raw);
+    }
+    case "date":
+    case "datetime-local":
+      return raw ? new Date(raw as string).toLocaleString() : "";
+    case "file":
+      return Array.isArray(raw) ? `${raw.length} file(s) uploaded` : "";
+    default:
+      return Array.isArray(raw) ? raw.join(", ") : String(raw);
+  }
+}
+
 export function buildZodSchema(formCards: Consultation["formCards"]) {
   const shape: Record<string, z.ZodTypeAny> = {};
 

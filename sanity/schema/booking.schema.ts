@@ -1,7 +1,5 @@
 import { defineField, defineType } from "sanity";
 import { HiMiniCalendarDays } from "react-icons/hi2";
-import { BookingFormFields } from "../components/BookingFormFields";
-import { Text } from "@react-email/components";
 
 export const bookingType = defineType({
   name: "booking",
@@ -70,11 +68,13 @@ export const bookingType = defineType({
       name: "stripeSessionId",
       title: "Stripe Session ID",
       type: "string",
+      hidden: ({ parent }) => parent?.paymentMethod !== "stripe",
     }),
     defineField({
       name: "paypalOrderId",
       title: "PayPal Order ID",
       type: "string",
+      hidden: ({ parent }) => parent?.paymentMethod !== "paypal",
     }),
     defineField({
       name: "formFields",
@@ -88,11 +88,22 @@ export const bookingType = defineType({
           fields: [
             { name: "fieldName", type: "string", readOnly: true },
             { name: "fieldLabel", type: "string", readOnly: true },
-            { name: "fieldType", type: "string", readOnly: true }, // new
+            { name: "fieldType", type: "string", readOnly: true },
             { name: "value", type: "text", readOnly: true },
+            {
+              name: "files",
+              title: "Uploaded Images",
+              type: "array",
+              of: [{ type: "image", options: { hotspot: true } }],
+              hidden: ({ parent }) => parent?.fieldType !== "file",
+            },
           ],
           preview: {
-            select: { title: "fieldLabel", subtitle: "value" },
+            select: {
+              title: "fieldLabel",
+              subtitle: "value",
+              media: "files.0",
+            },
           },
         },
       ],

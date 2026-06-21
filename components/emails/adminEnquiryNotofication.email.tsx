@@ -87,12 +87,8 @@ export const AdminEnquiryNotificationEmail = (
                       src={image}
                       alt={`Inspiration ${index + 1}`}
                       width="180"
-                      style={{
-                        width: "100%",
-                        height: "auto",
-                        borderRadius: "6px",
-                        border: "1px solid #e5e7eb",
-                      }}
+                      height="auto"
+                      className="w-full rounded-[6px] border border-[#e5e7eb] object-cover"
                     />
                   </td>
                 ))}

@@ -7,6 +7,7 @@ import {
   BOOKINGS_FOR_DATE_QUERY,
 } from "@/sanity/queries/blockedSlot";
 import { randomUUID } from "crypto";
+import { resolveFieldValue } from "@/lib/consultation";
 
 // --------------------------------------------------------------
 // Public: get available time slots for a given consultation & date
@@ -17,9 +18,26 @@ type AvailabilityResult = {
   message: string | null;
 };
 
+async function uploadFieldFiles(files: File[]) {
+  const uploaded = [];
+  for (const file of files) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const asset = await writeClient.assets.upload("image", buffer, {
+      filename: file.name,
+      contentType: file.type,
+    });
+    uploaded.push({
+      _type: "image" as const,
+      _key: randomUUID(),
+      asset: { _type: "reference" as const, _ref: asset._id },
+    });
+  }
+  return uploaded;
+}
+
 export async function getAvailableTimes(
   consultationSlug: string,
-  dateStr: string, // "YYYY-MM-DD"
+  dateStr: string,
 ): Promise<AvailabilityResult> {
   // 1. Get consultation ID
   const consultation = await client.fetch(
@@ -29,7 +47,7 @@ export async function getAvailableTimes(
   if (!consultation) throw new Error("Consultation not found");
   const consultationId = consultation._id;
 
-  // 2. Get business hours for that day (using local timezone America/New_York)
+  // 2. Get business hours for that day
   const businessHours = await client.fetch(BUSINESS_HOUR_QUERY);
   const dayOfWeek = new Date(dateStr + "T00:00:00Z").toLocaleDateString(
     "en-US",
@@ -42,11 +60,11 @@ export async function getAvailableTimes(
   if (!dayHours || !dayHours.isOpen) {
     return { slots: [], blocked: true, message: "We are closed on this day." };
   }
-  const openTime = dayHours.startTime; // "09:00"
-  const closeTime = dayHours.endTime; // "17:00"
+  const openTime = dayHours.startTime;
+  const closeTime = dayHours.endTime;
 
   // 3. Generate all possible slots (30‑minute intervals)
-  const SLOT_INTERVAL = 30; // minutes
+  const SLOT_INTERVAL = 30;
   const slots: string[] = [];
   let current = parseTime(openTime as string);
   const close = parseTime(closeTime as string);
@@ -64,7 +82,7 @@ export async function getAvailableTimes(
   let blockMessage: string | null = null;
   const blockedTimes = new Set<string>();
   let allDayBlocked = false;
-  const DEFAULT_DURATION = 60; // fallback if no duration provided
+  const DEFAULT_DURATION = 60;
 
   for (const block of blockedSlots) {
     if (block.allDay) {
@@ -73,7 +91,6 @@ export async function getAvailableTimes(
       break;
     }
 
-    // Determine duration: prefer consultation duration, then block's duration, then default
     let duration =
       block.consultationDuration ?? block.duration ?? DEFAULT_DURATION;
     if (typeof duration !== "number" || duration <= 0) {
@@ -95,6 +112,15 @@ export async function getAvailableTimes(
     }
   }
 
+  // --- FIX: early return if allDay blocked ---
+  if (allDayBlocked) {
+    return {
+      slots: [],
+      blocked: true,
+      message: blockMessage || "This day is fully booked.",
+    };
+  }
+
   // 5. Fetch existing bookings for this date
   const startDate = new Date(dateStr + "T00:00:00.000Z");
   const endDate = new Date(dateStr + "T23:59:59.999Z");
@@ -107,7 +133,6 @@ export async function getAvailableTimes(
   const bookedTimes = new Set<string>();
   for (const booking of bookings) {
     const bookingDate = new Date(booking.dateTime as string);
-    // Use the same timezone as the slot generation
     const mins = bookingDate.getHours() * 60 + bookingDate.getMinutes();
     bookedTimes.add(formatTime(mins));
   }
@@ -151,7 +176,7 @@ export async function bookConsultation(formData: Record<string, unknown>) {
   if (availability.blocked) {
     return {
       success: false,
-      error: availability.message || "This time slot is not available.",
+      error: availability.message,
     };
   }
 
@@ -162,19 +187,22 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     return { success: false, error: "The selected time is not available." };
   }
 
-  // Fetch consultation with formCards structure
+  // Fetch consultation with full field metadata (needed to resolve option ids -> labels)
   const consultation = await writeClient.fetch(
     `*[_type == "consultation" && slug.current == $slug][0]{
-      _id,
-      title,
-      price,
-      formCards[]{
-        fields[]{
-          name,
-          label
-        }
+    _id,
+    title,
+    price,
+    formCards[]{
+      fields[]{
+        name,
+        type,
+        label,
+        options[]{ id, label },
+        items[]{ id, title }
       }
-    }`,
+    }
+  }`,
     { slug: consultationSlug },
   );
   if (!consultation) {
@@ -186,7 +214,13 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     _key: string;
     fieldName: string;
     fieldLabel: string;
+    fieldType: string;
     value: string;
+    files?: {
+      _type: "image";
+      _key: string;
+      asset: { _type: "reference"; _ref: string };
+    }[];
   }[] = [];
 
   const allFields =
@@ -195,25 +229,30 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     ) || [];
 
   for (const field of allFields) {
-    const fieldName = field.name;
-    const fieldLabel = field.label || fieldName;
-    const rawValue = rest[fieldName];
-    if (rawValue !== undefined) {
-      let stringValue: string;
-      if (Array.isArray(rawValue)) {
-        stringValue = rawValue.join(", ");
-      } else if (typeof rawValue === "object" && rawValue !== null) {
-        stringValue = JSON.stringify(rawValue);
-      } else {
-        stringValue = String(rawValue);
-      }
+    const rawValue = rest[field.name];
+    if (rawValue === undefined) continue;
+
+    if (field.type === "file") {
+      const files = (Array.isArray(rawValue) ? rawValue : [rawValue]) as File[];
+      const uploadedFiles = await uploadFieldFiles(files);
       formFields.push({
         _key: randomUUID(),
-        fieldName,
-        fieldLabel,
-        value: stringValue,
+        fieldName: field.name,
+        fieldLabel: field.label || field.name,
+        fieldType: field.type,
+        value: `${uploadedFiles.length} image(s) uploaded`,
+        files: uploadedFiles,
       });
+      continue;
     }
+
+    formFields.push({
+      _key: randomUUID(),
+      fieldName: field.name,
+      fieldLabel: field.label || field.name,
+      fieldType: field.type,
+      value: resolveFieldValue(field, rawValue),
+    });
   }
 
   // Create booking with status "paid"
@@ -237,7 +276,6 @@ export async function bookConsultation(formData: Record<string, unknown>) {
       status: "pending",
       paymentMethod: paymentMethod || "stripe",
       formFields,
-      formData: JSON.stringify(rest),
     });
     bookingId = booking._id;
   } catch (error) {

@@ -1,6 +1,6 @@
 import { siteConfig } from "@/config/site.config";
 import { EmailLayout } from "../shared/email-layout";
-import { Text, Link, Hr } from "@react-email/components";
+import { Text, Link, Hr, Section, Img } from "@react-email/components";
 import { SOCIAL_QUERY_RESULT } from "@/sanity.types";
 
 interface AdminOrderNotificationEmailProps {
@@ -15,6 +15,7 @@ interface AdminOrderNotificationEmailProps {
     name: string;
     quantity: number;
     price: number;
+    imageUrl?: string;
   }[];
   socialHandles?: SOCIAL_QUERY_RESULT;
 }
@@ -52,20 +53,51 @@ export const AdminOrderNotificationEmail = (
         <strong>{props.paymentStatus}</strong>.
       </Text>
 
+      <Hr className="my-6" />
+
       <Text className="mt-6 text-sm leading-6 font-medium text-[#3c4043]">
         Order Summary
       </Text>
 
-      <Text className="mt-2 border-l-2 border-[#e5e7eb] pl-4 text-sm leading-6 whitespace-pre-wrap text-[#6b7280]">
-        {props.items
+      {props.items.map((item, index) => (
+        <Section key={index} className="mt-4">
+          <table
+            width="100%"
+            cellPadding="0"
+            cellSpacing="0"
+            role="presentation"
+          >
+            <tbody>
+              <tr>
+                <td width="82" valign="top">
+                  <Img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    width="70"
+                    height="60"
+                    className="rounded-md object-cover"
+                  />
+                </td>
 
-          .map(
-            (item) =>
-              `${item.quantity} × ${item.name} — $${item.price.toFixed(2)}`,
-          )
+                <td valign="top">
+                  <Text className="m-0 text-sm font-medium text-[#3c4043]">
+                    {item.name}
+                  </Text>
 
-          .join("\n")}
-      </Text>
+                  <Text className="m-0 text-xs text-[#6b7280]">
+                    Price: <strong>${item.price}</strong>
+                  </Text>
+
+                  <Text className="m-0 mt-2 text-xs text-[#6b7280]">
+                    Quantity: <strong>{item.quantity}</strong> ={" "}
+                    <strong>${(item.price * item.quantity).toFixed(2)}</strong>
+                  </Text>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </Section>
+      ))}
 
       <Hr className="my-6" />
 

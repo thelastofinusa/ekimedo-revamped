@@ -34,7 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { consultationsData } from "@/constants/consultation";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FileUpload,
@@ -50,8 +49,13 @@ import { submitReview } from "../actions";
 import { client, clientOptions } from "@/sanity/lib/client";
 import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission";
 import { ClerkLoaded, ClerkLoading, useUser } from "@clerk/nextjs";
+import { CONSULTATION_QUERY_RESULT } from "@/sanity.types";
 
-export const NewReviewForm = () => {
+export const NewReviewForm = ({
+  consultations,
+}: {
+  consultations: CONSULTATION_QUERY_RESULT;
+}) => {
   const { user } = useUser();
   const customerEmail =
     user?.primaryEmailAddress?.emailAddress ??
@@ -225,14 +229,14 @@ export const NewReviewForm = () => {
 
                                 <SelectContent>
                                   {[
-                                    ...consultationsData.map((data) => ({
+                                    ...consultations.map((data) => ({
                                       value: data.title,
                                       label: data.title,
                                     })),
                                   ].map((type) => (
                                     <SelectItem
                                       key={type.value}
-                                      value={type.value}
+                                      value={type.value as string}
                                     >
                                       {type.label}
                                     </SelectItem>

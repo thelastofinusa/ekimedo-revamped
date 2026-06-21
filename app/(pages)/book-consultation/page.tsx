@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 export default async function BookConsultation() {
   const { data: consultations } = await sanityFetch({
     query: CONSULTATION_QUERY,
-    params: { onPMPage: false, slug: null },
+    params: { onPMPage: false },
   });
 
   return (

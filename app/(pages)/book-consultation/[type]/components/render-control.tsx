@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 import React from "react";
 import {
@@ -41,7 +42,6 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { formatDate, formatTimeTo12Hour } from "@/lib/format";
 import { format } from "date-fns";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -404,7 +404,7 @@ function DateTimeField({
   consultationSlug,
 }: {
   value?: string;
-  onChange: (value: string) => void;
+  onChange: (value: string | undefined) => void;
   disabled?: boolean;
   placeholder?: string;
   consultationSlug: string;
@@ -424,12 +424,12 @@ function DateTimeField({
   React.useEffect(() => {
     if (!userInteracted.current) return;
     if (blocked && blockMessage) {
-      toast.info("Day Blocked", {
+      toast.info("Date Selection Unavailable", {
         description: blockMessage,
       });
     }
     if (timeError && !blocked) {
-      toast.error("Time Slot Unavailable", {
+      toast.error("Time Slot Not Available", {
         description: timeError,
       });
     }
@@ -439,7 +439,6 @@ function DateTimeField({
   React.useEffect(() => {
     const datePart = value ? value.split("T")[0] : undefined;
     if (!datePart || !consultationSlug) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAvailableSlots([]);
       setBlocked(false);
       setBlockMessage(null);
@@ -454,6 +453,10 @@ function DateTimeField({
         setAvailableSlots(result.slots);
         setBlocked(result.blocked);
         setBlockMessage(result.message || "No slots available");
+        // If blocked, clear the field value if it's set
+        if (result.blocked && value) {
+          onChange(undefined);
+        }
         // Only set timeError if user has interacted
         if (
           userInteracted.current &&
@@ -461,7 +464,7 @@ function DateTimeField({
           !result.blocked &&
           !result.slots.includes(selectedTime)
         ) {
-          setTimeError("This time slot is not available.");
+          setTimeError(result.message);
         } else {
           setTimeError(null);
         }
@@ -472,9 +475,11 @@ function DateTimeField({
         setBlocked(true);
         setBlockMessage("Unable to load availability. Please try again.");
         setTimeError(null);
+        // Also clear the field on error
+        if (value) onChange(undefined);
       })
       .finally(() => setLoading(false));
-  }, [value, consultationSlug]);
+  }, [value, consultationSlug, onChange]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;

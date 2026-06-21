@@ -2,6 +2,8 @@ import { HeroComp } from "@/components/shared/hero";
 import { siteConfig } from "@/config/site.config";
 import { Metadata } from "next";
 import { NewReviewForm } from "../components/new-review-form";
+import { client, clientOptions } from "@/sanity/lib/client";
+import { CONSULTATION_QUERY } from "@/sanity/queries/consultation";
 
 export const metadata: Metadata = {
   title: "New Review",
@@ -32,7 +34,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function NewReview() {
+export default async function NewReview() {
+  const consultations = await client.fetch(
+    CONSULTATION_QUERY,
+    { onPMPage: null },
+    clientOptions,
+  );
+
   return (
     <div className="flex-1 overflow-x-clip">
       <HeroComp
@@ -41,7 +49,7 @@ export default function NewReview() {
         imagePath="testimonials.jpeg"
       />
 
-      <NewReviewForm />
+      <NewReviewForm consultations={consultations} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { client, clientOptions } from "@/sanity/lib/client";
 import { SOCIAL_QUERY } from "@/sanity/queries/socials";
 import { EmailCard } from "./email-card";
 import AdminReviewNotificationEmail from "@/components/emails/adminReviewNotification.email";
+import AdminConsultationNotificationEmail from "@/components/emails/adminConsultationNotification";
 
 export default async function EmailPreview() {
   const socialHandles = await client.fetch(SOCIAL_QUERY, {}, clientOptions);
@@ -52,17 +53,20 @@ export default async function EmailPreview() {
                     {
                       name: "Premium Hoodie",
                       quantity: 2,
-                      price: 79.99,
-                    },
-                    {
-                      name: "Logo T-Shirt",
-                      quantity: 1,
-                      price: 49.99,
+                      price: 59.99,
+                      imageUrl: "https://picsum.photos/200",
                     },
                     {
                       name: "Coffee Mug",
                       quantity: 1,
-                      price: 40.02,
+                      price: 14.99,
+                      imageUrl: "https://picsum.photos/201",
+                    },
+                    {
+                      name: "Logo T-Shirt",
+                      quantity: 3,
+                      price: 24.99,
+                      imageUrl: "https://picsum.photos/202",
                     },
                   ]}
                   socialHandles={socialHandles}
@@ -214,6 +218,48 @@ export default async function EmailPreview() {
                     "https://picsum.photos/201",
                   ]}
                   socialHandles={socialHandles}
+                />
+              }
+            />
+            <EmailCard
+              name="Customer Enquiry Notification"
+              component={
+                <AdminConsultationNotificationEmail
+                  bookingId="alksnldknsd"
+                  consultationType="Bridal Consultation"
+                  customerName="John Doe"
+                  customerEmail="john@gmail.com"
+                  customerPhone="+234928919303"
+                  consultationDate="2026-07-01"
+                  formData={{
+                    fName: "James",
+                    lName: "Anderson",
+                    email: "kohote2773@ocuser.com",
+                    phone: "+19842185441",
+                    eventDate: "2026-06-22",
+                    guests: 1,
+                    location: "virtual",
+                    consultationDate: "2026-06-22T10:00",
+                    interests: [
+                      "wedding-gown",
+                      "classic",
+                      "modern",
+                      "bohemian",
+                      "vintage",
+                      "reception-dress",
+                      "bridal-robe",
+                    ],
+                    referBy: "andrewgarfield@gmail.com",
+                    budget: 6000,
+                    inspiration: [{}],
+                    timeline: ["timeline-acknowledged", "rush-required"],
+                    cancellationPolicy: ["cancellation-accepted"],
+                    consultationSlug: "bridal-consultation",
+                    dateTime: "2026-06-22T10:00",
+                    paymentMethod: "stripe",
+                    _id: "3c9be4ae-ff0f-42df-8b23-81e91886233e",
+                    slug: "bridal-consultation",
+                  }}
                 />
               }
             />

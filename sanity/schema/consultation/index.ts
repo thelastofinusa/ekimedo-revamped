@@ -51,7 +51,8 @@ export const consultationType = defineType({
       name: "dresses",
       title: "Maximum Dresses",
       type: "number",
-      description: "Optional. Used for Try-On consultations.",
+      description:
+        "Optional. Used only when consultation slug is exactly 'pre-made-dress-try-on'.",
     }),
     defineField({
       name: "image",

@@ -1,6 +1,7 @@
 import { siteConfig } from "@/config/site.config";
 import { EmailLayout } from "../shared/email-layout";
 import { Text, Link, Hr, Img } from "@react-email/components";
+import { SOCIAL_QUERY_RESULT } from "@/sanity.types";
 
 interface AdminReviewNotificationEmailProps {
   fullName: string;
@@ -9,6 +10,7 @@ interface AdminReviewNotificationEmailProps {
   review: string;
   images?: string[];
   testimonialId: string;
+  socialHandles?: SOCIAL_QUERY_RESULT;
 }
 
 export const AdminReviewNotificationEmail = ({
@@ -18,6 +20,7 @@ export const AdminReviewNotificationEmail = ({
   review,
   images = [],
   testimonialId,
+  socialHandles,
 }: AdminReviewNotificationEmailProps) => {
   const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
   const orderUrl = `${siteConfig.url}/admin/structure/websiteContent;testimonial;${testimonialId}`;
@@ -26,6 +29,7 @@ export const AdminReviewNotificationEmail = ({
     <EmailLayout
       preview={`New review received from ${fullName}`}
       title="New Review Submission"
+      socialHandles={socialHandles}
     >
       {/* Intro */}
       <Text className="text-sm leading-6 text-[#3c4043]">

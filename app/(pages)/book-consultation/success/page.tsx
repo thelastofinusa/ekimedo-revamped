@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { client, writeClient } from "@/sanity/lib/client";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 import AdminBookingNotificationEmail from "@/components/emails/admin-booking-notification";
 import { getStripe } from "@/lib/stripe";
 import Link from "next/link";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
 
 export default async function SuccessPage({
   searchParams,
@@ -45,6 +46,7 @@ export default async function SuccessPage({
     }`,
     { id: bookingId },
   );
+  const socialHandles = await client.fetch(SOCIAL_QUERY);
 
   if (!booking) {
     return <div>Booking not found.</div>;
@@ -56,6 +58,7 @@ export default async function SuccessPage({
   );
 
   if (!alreadyProcessed) {
+    const resend = getResend();
     // Update booking status to "paid"
     await writeClient.patch(bookingId).set({ status: "paid" }).commit();
 
@@ -72,6 +75,7 @@ export default async function SuccessPage({
           location: "in-person",
           bookingId: booking._id,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+          socialLinks: socialHandles,
         }),
       });
     } catch (error) {

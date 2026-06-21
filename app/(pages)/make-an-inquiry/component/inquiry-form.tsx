@@ -257,10 +257,12 @@ export const InquiryForm = () => {
                           }
                         />
                         <Link
-                          href="/pricing"
+                          href={isSubmitting ? "#" : "/pricing"}
                           className={buttonVariants({
                             variant: "default",
                             size: "lg",
+                            className:
+                              isSubmitting && "pointer-events-none opacity-50",
                           })}
                         >
                           Our Pricing

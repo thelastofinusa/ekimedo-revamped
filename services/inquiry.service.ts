@@ -1,5 +1,5 @@
 import { writeClient, client } from "@/sanity/lib/client";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 
 import CustomerEnquiryNotificationEmail from "@/components/emails/customerEnquiryNotification.email";
 import { SOCIAL_QUERY } from "@/sanity/queries/socials";
@@ -16,6 +16,7 @@ const EVENT_TYPES: Record<string, string> = {
 
 export async function createInquiryService(formData: FormData) {
   try {
+    const resend = getResend();
     // Convert FormData to object for Zod validation
     const rawData: Record<string, unknown> = {};
     for (const [key, value] of formData.entries()) {

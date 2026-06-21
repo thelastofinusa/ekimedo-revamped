@@ -1,9 +1,11 @@
-import { resend } from "./resend";
+import { getResend } from "./resend";
 
 import AdminOrderNotificationEmail from "@/components/emails/adminOrderNotification.email";
 import CustomerOrderNotificationEmail from "@/components/emails/customerOrderNotification.email";
 import { OrderStatusEmail } from "@/components/emails/orderStatus.email";
 import { OrderStatusValue } from "@/constants/status";
+import { client } from "@/sanity/lib/client";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
 
 interface OrderItem {
   name: string;
@@ -35,6 +37,8 @@ export async function sendAdminOrderEmail({
   paymentStatus: string;
 }) {
   try {
+    const socialHandles = await client.fetch(SOCIAL_QUERY);
+    const resend = getResend();
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
@@ -48,6 +52,7 @@ export async function sendAdminOrderEmail({
         paymentMethod,
         paymentStatus,
         items,
+        socialHandles,
       }),
     });
     console.log(`Admin email sent for order ${orderNumber}`);
@@ -75,6 +80,8 @@ export async function sendCustomerOrderEmail({
   items: OrderItem[];
 }) {
   try {
+    const socialHandles = await client.fetch(SOCIAL_QUERY);
+    const resend = getResend();
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
@@ -86,6 +93,7 @@ export async function sendCustomerOrderEmail({
         ordersUrl,
         totalAmount,
         items,
+        socialHandles,
       }),
     });
     console.log(`Customer email sent for order ${orderNumber}`);
@@ -113,6 +121,8 @@ export async function sendCustomerOrderStatusEmail({
   orderId: string;
 }) {
   try {
+    const socialHandles = await client.fetch(SOCIAL_QUERY);
+    const resend = getResend();
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: customerEmail,
@@ -123,6 +133,7 @@ export async function sendCustomerOrderStatusEmail({
         status,
         ordersUrl,
         orderId,
+        socialHandles,
       }),
     });
     console.log(`Customer status email sent for order ${orderNumber}`);

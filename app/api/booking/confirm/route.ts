@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { writeClient } from "@/sanity/lib/client";
-import { resend } from "@/lib/resend";
+import { client, writeClient } from "@/sanity/lib/client";
+import { getResend } from "@/lib/resend";
 import AppointmentConfirmationEmail from "@/components/emails/appointment-confirmation";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
       }`,
       { id: bookingId },
     );
+    const socialHandles = await client.fetch(SOCIAL_QUERY);
 
     if (!booking) {
       return NextResponse.json({ error: "Booking not found" }, { status: 404 });
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const resend = getResend();
     // Send client email
     let emailError: string | null = null;
     try {
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
           location: "in-person",
           calendarUrl: "https://calendar.google.com/...",
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+          socialLinks: socialHandles,
         }),
       });
     } catch (error) {

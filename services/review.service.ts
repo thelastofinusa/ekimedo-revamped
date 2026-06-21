@@ -1,7 +1,8 @@
 import { randomUUID } from "crypto";
-import { writeClient } from "@/sanity/lib/client";
-import { resend } from "@/lib/resend";
+import { client, writeClient } from "@/sanity/lib/client";
+import { getResend } from "@/lib/resend";
 import AdminReviewNotificationEmail from "@/components/emails/adminReviewNotification.email";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
 
 interface UserInfo {
   id: string;
@@ -13,6 +14,7 @@ interface UserInfo {
 
 export async function createReviewService(formData: FormData, user: UserInfo) {
   try {
+    const resend = getResend();
     const review = formData.get("review") as string;
     const ratingRaw = formData.get("rating") as string;
     const serviceRaw = formData.get("service") as string;
@@ -93,7 +95,7 @@ export async function createReviewService(formData: FormData, user: UserInfo) {
         : undefined,
       workAssets: uploadedAssets.length > 0 ? uploadedAssets : undefined,
     });
-
+    const socialHandles = await client.fetch(SOCIAL_QUERY);
     // 7. Send customer email
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
@@ -106,6 +108,7 @@ export async function createReviewService(formData: FormData, user: UserInfo) {
         testimonialId: updatedReview._id,
         review: updatedReview.review,
         images: updatedAssets,
+        socialHandles: socialHandles,
       }),
     });
 

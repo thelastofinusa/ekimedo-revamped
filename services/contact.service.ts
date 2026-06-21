@@ -1,6 +1,8 @@
 import { zSchema, ZSchemaType } from "@/lib/validators";
-import { resend } from "@/lib/resend";
+import { getResend } from "@/lib/resend";
 import ContactEmail from "@/components/emails/contactForm.email";
+import { client } from "@/sanity/lib/client";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
 
 export async function createContactMessageService(
   formData: ZSchemaType["contact"],
@@ -18,6 +20,8 @@ export async function createContactMessageService(
   const { fName, lName, email, phone, inquiryType, message } = formData;
 
   try {
+    const socialHandles = await client.fetch(SOCIAL_QUERY);
+    const resend = getResend();
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
@@ -30,6 +34,7 @@ export async function createContactMessageService(
         phone,
         inquiryType,
         message,
+        socialHandles,
       }),
     });
 

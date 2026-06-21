@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "(clear) & (bun run dev) & (bun run stripe)",
+    "start": "(bun run dev) & (bun run stripe)",
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
     "typegen": "sanity schema extract && sanity typegen generate",

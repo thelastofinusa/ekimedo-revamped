@@ -3,9 +3,9 @@ import type { StructureResolver } from "sanity/structure";
 import { SlSettings } from "react-icons/sl";
 import {
   BsCalendar2Minus,
-  BsCart3,
+  BsDuffle,
   BsChatSquareDots,
-  BsCollection,
+  BsCollectionPlay,
 } from "react-icons/bs";
 
 export const structure: StructureResolver = (S) =>
@@ -37,7 +37,7 @@ export const structure: StructureResolver = (S) =>
       // ==================================================
       S.listItem()
         .title("Products & Orders")
-        .icon(BsCart3)
+        .icon(BsDuffle)
         .child(
           S.list()
             .title("Products & Orders")
@@ -55,7 +55,7 @@ export const structure: StructureResolver = (S) =>
       // ==================================================
       S.listItem()
         .title("Gallery")
-        .icon(BsCollection)
+        .icon(BsCollectionPlay)
         .child(
           S.list()
             .title("Gallery")

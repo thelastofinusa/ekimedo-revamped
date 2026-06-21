@@ -20,10 +20,12 @@ export const AdminEnquiryNotificationEmail = (
   props: AdminEnquiryNotificationEmailProps,
 ) => {
   const orderUrl = `${siteConfig.url}/admin/structure/consultationsBookings;inquiry;${props.inquiryId}`;
-  http: return (
+
+  return (
     <EmailLayout
       preview={`New custom order enquiry from ${props.fullName}`}
       title="New Custom Order Enquiry"
+      socialHandles={props.socialHandles}
     >
       <Text className="text-sm leading-6 text-[#3c4043]">
         A new custom order enquiry has been submitted through your website.

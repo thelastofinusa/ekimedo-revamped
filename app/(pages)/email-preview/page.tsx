@@ -213,6 +213,7 @@ export default async function EmailPreview() {
                     "https://picsum.photos/200",
                     "https://picsum.photos/201",
                   ]}
+                  socialHandles={socialHandles}
                 />
               }
             />

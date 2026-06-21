@@ -28,6 +28,7 @@ export const AdminOrderNotificationEmail = (
     <EmailLayout
       preview={`New order received — #${props.orderNumber}`}
       title="New Order Received"
+      socialHandles={props.socialHandles}
     >
       <Text className="text-sm leading-6 text-[#3c4043]">
         A new order has been placed through your website.

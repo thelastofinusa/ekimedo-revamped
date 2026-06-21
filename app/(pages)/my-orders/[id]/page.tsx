@@ -84,9 +84,9 @@ export default async function OrderDetailsPage(
                   <div key={item._key} className="flex flex-1 gap-4 py-6">
                     {/* Image */}
                     <div className="bg-border/20 relative flex size-24 items-center justify-center overflow-hidden border shadow-xs">
-                      {item.product?.image?.asset?.url ? (
+                      {item.product?.image ? (
                         <Image
-                          src={item.product.image.asset.url}
+                          src={item.product.image}
                           alt={item.product.name ?? "Product"}
                           fill
                           className="object-cover"

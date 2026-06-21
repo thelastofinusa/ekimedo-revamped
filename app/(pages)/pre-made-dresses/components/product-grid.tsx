@@ -84,13 +84,13 @@ export const ProductGrid: React.FC<{
 
   return (
     <div className="flex-1">
-      <div className="mb-6 flex items-center">
-        <p className="text-foreground text-sm font-normal">
+      <div className="mb-8 flex items-center">
+        <h2 className="text-foreground font-sans text-xs font-normal tracking-widest uppercase">
           Showing{" "}
           <strong className="font-mono">{paginatedProducts.length}</strong> of{" "}
           <strong className="font-mono">{filteredProducts.length}</strong>{" "}
           results
-        </p>
+        </h2>
       </div>
       {isEmptyProducts ? (
         <div className="flex h-96 flex-col items-center justify-center text-center">

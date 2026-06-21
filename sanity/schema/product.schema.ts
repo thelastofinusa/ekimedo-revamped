@@ -53,16 +53,29 @@ export const productType = defineType({
     }),
 
     defineField({
-      name: "images",
+      name: "snapshots",
       title: "Snapshots",
       type: "array",
       of: [
         {
           type: "image",
+          title: "Image",
           options: { hotspot: true },
         },
+        {
+          type: "file",
+          title: "Video",
+          options: {
+            accept: "video/*", // only accept video files
+          },
+        },
       ],
-      validation: (rule) => rule.min(1).error("At least one image is required"),
+      validation: (rule) =>
+        rule
+          .min(1)
+          .error("At least one snapshot is required")
+          .max(6)
+          .error("A maximum of 6 snapshots"),
     }),
 
     defineField({

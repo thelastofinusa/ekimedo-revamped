@@ -9,10 +9,12 @@ export const PRODUCT_QUERY = defineQuery(`
     colors[]->{name, "value": value.hex},
     description,
     delivery,
-    "images": images[].asset->url,
+    "snapshots": snapshots[]{
+      _type,
+      "url": asset->url
+    },
     sizes,
     stock,
-    delivery,
     category -> {
         _id,
         name,
@@ -29,7 +31,10 @@ export const PRODUCT_BY_SLUG_QUERY = defineQuery(`
     price,
     colors[]->{name, "value": value.hex},
     description,
-    "images": images[].asset->url,
+    "snapshots": snapshots[]{
+      _type,
+      "url": asset->url
+    },
     sizes,
     stock,
     delivery,
@@ -49,7 +54,10 @@ export const PRODUCT_BY_IDS_QUERY = defineQuery(`
     price,
     colors[]->{name, "value": value.hex},
     description,
-    "images": images[].asset->url,
+    "snapshots": snapshots[]{
+      _type,
+      "url": asset->url
+    },
     sizes,
     stock,
     delivery,

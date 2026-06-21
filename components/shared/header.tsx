@@ -39,6 +39,7 @@ import { client, clientOptions } from "@/sanity/lib/client";
 import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission";
 import { useTotalItems } from "../providers/cart.provider";
 import { CartSheet } from "../sheets/cart.sheet";
+import { MenuSheet } from "../sheets/menu.sheet";
 
 export const Header = () => {
   const pathname = usePathname();
@@ -58,6 +59,7 @@ export const Header = () => {
   const scrollTimeout = React.useRef<NodeJS.Timeout | null>(null);
   const [isActive, setIsActive] = React.useState<boolean>(false);
   const [openCart, setOpenCart] = React.useState<boolean>(false);
+  const [openMenu, setOpenMenu] = React.useState<boolean>(false);
   const [isScrolling, setIsScrolling] = React.useState<boolean>(false);
 
   const forceActive = React.useMemo(
@@ -230,14 +232,17 @@ export const Header = () => {
               </Button>
             </CartSheet>
 
-            <Button
-              size="icon-sm"
-              variant={isActive ? "default" : "secondary"}
-              className="lg:hidden"
-            >
-              <MenuIcon className="size-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
+            <MenuSheet openMenu={openMenu} setOpenMenu={setOpenMenu}>
+              <Button
+                size="icon-sm"
+                onClick={() => setOpenMenu(true)}
+                variant={isActive ? "default" : "secondary"}
+                className="lg:hidden"
+              >
+                <MenuIcon className="size-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </MenuSheet>
 
             <div className="flex items-center gap-2">
               <Separator orientation="vertical" className="h-3! w-px" />

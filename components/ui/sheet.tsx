@@ -91,7 +91,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
     <header
       data-slot="sheet-header"
       className={cn(
-        "flex w-full items-center justify-between border-b p-6 md:px-8",
+        "flex w-full items-center justify-between border-b p-6 py-4 md:px-8",
         className,
       )}
       {...props}

@@ -7,7 +7,7 @@ import {
   ORDER_BY_STRIPE_PAYMENT_ID_QUERY,
   ORDER_BY_ID_QUERY,
 } from "@/sanity/queries/orders";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { Order, ORDER_BY_ID_QUERY_RESULT, Product } from "@/sanity.types";
 import { siteConfig } from "@/config/site.config";
 import { sendAdminOrderEmail, sendCustomerOrderEmail } from "@/lib/order-email";
@@ -264,6 +264,7 @@ export async function createCheckoutSession(
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
 
     if (paymentMethod === "stripe") {
+      const stripe = getStripe();
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         payment_method_types: ["card"],
@@ -446,6 +447,7 @@ export async function createPaymentIntent(
       total: totalAmount,
     });
 
+    const stripe = getStripe();
     // Create PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(totalAmount * 100),
@@ -486,6 +488,7 @@ export async function getCheckoutSession(sessionId: string, userId: string) {
       return { success: false, error: "Not authenticated" };
     }
 
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["line_items", "customer_details"],
     });
@@ -622,6 +625,7 @@ export async function getOrderByPaymentIntent(
 
     if (paymentStatus !== "paid") {
       try {
+        const stripe = getStripe();
         const paymentIntent =
           await stripe.paymentIntents.retrieve(paymentIntentId);
         if (paymentIntent.status === "succeeded") {
@@ -688,14 +692,12 @@ export async function getOrCreateOrderFromCheckoutSession(
     const orderId = `order_${sessionId}`;
 
     // 1. Check existing order
-    let fullOrder = await client.fetch<ORDER_BY_ID_QUERY_RESULT>(
-      `*[_type == "order" && _id == $id][0]`,
-      { id: orderId },
-    );
+    let fullOrder = await client.fetch(ORDER_BY_ID_QUERY, { id: orderId });
     if (fullOrder) {
       return { success: true, session: mapOrderToSession(fullOrder) };
     }
 
+    const stripe = getStripe();
     // 2. Retrieve Stripe session
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["payment_intent"],
@@ -803,10 +805,7 @@ export async function getOrCreateOrderFromCheckoutSession(
       await createOrderAndDecrementStock(orderData, orderItemsInput);
     } catch (error: any) {
       if (error.statusCode === 409) {
-        fullOrder = await client.fetch<ORDER_BY_ID_QUERY_RESULT>(
-          `*[_type == "order" && _id == $id][0]`,
-          { id: orderId },
-        );
+        fullOrder = await client.fetch(ORDER_BY_ID_QUERY, { id: orderId });
         if (fullOrder) {
           return { success: true, session: mapOrderToSession(fullOrder) };
         }
@@ -815,10 +814,7 @@ export async function getOrCreateOrderFromCheckoutSession(
     }
 
     // 10. Fetch created order
-    fullOrder = await client.fetch<ORDER_BY_ID_QUERY_RESULT>(
-      `*[_type == "order" && _id == $id][0]`,
-      { id: orderId },
-    );
+    fullOrder = await client.fetch(ORDER_BY_ID_QUERY, { id: orderId });
 
     // 11. Send emails with images from order items
     try {

@@ -1,6 +1,6 @@
 "use server";
 
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 export async function createCheckoutSession(
   bookingId: string,
@@ -10,6 +10,7 @@ export async function createCheckoutSession(
   consultationSlug: string,
 ) {
   try {
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [

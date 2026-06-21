@@ -6,7 +6,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BookingForm } from "./components/booking-form";
 import { sanityFetch } from "@/sanity/lib/live";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 
 // Helper to safely get a single string from searchParams
 function getParam(value: string | string[] | undefined): string | undefined {
@@ -72,6 +72,7 @@ export default async function ConsultationType(
     if (sessionId) {
       // Stripe
       try {
+        const stripe = getStripe();
         const session = await stripe.checkout.sessions.retrieve(sessionId);
         if (session.payment_status === "paid") {
           const bId = session.metadata?.bookingId;

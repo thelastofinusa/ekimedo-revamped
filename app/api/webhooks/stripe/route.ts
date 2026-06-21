@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { client, writeClient } from "@/sanity/lib/client";
 import { sendAdminOrderEmail, sendCustomerOrderEmail } from "@/lib/order-email";
 import { siteConfig } from "@/config/site.config";
 import { createOrderAndDecrementStock } from "@/app/(pages)/checkout/actions";
+import { ORDER_BY_ID_QUERY } from "@/sanity/queries/orders";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get("stripe-signature")!;
 
   let event: Stripe.Event;
+  const stripe = getStripe();
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
@@ -71,10 +73,9 @@ export async function POST(req: NextRequest) {
   const orderId = `order_${sessionId}`;
 
   // Idempotency check: order already exists?
-  const existingOrder = await writeClient.fetch(
-    `*[_type == "order" && _id == $id][0]`,
-    { id: orderId },
-  );
+  const existingOrder = await writeClient.fetch(ORDER_BY_ID_QUERY, {
+    id: orderId,
+  });
   if (existingOrder) {
     console.log(`Order ${orderId} already exists, skipping.`);
     return NextResponse.json({ received: true });

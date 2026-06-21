@@ -83,147 +83,119 @@ export const SuccessCard: React.FC<Props> = ({ session }) => {
     }, 250);
   }, []);
 
-  console.log(session);
-
   return (
-    <div className="md:py-8 lg:py-16">
-      <Container size="xs" className="flex max-w-2xl flex-col gap-10">
-        <div className="mx-auto flex flex-col gap-2 text-center">
-          <div className="flex items-center justify-center gap-2">
-            <CheckCheckIcon className="size-5 text-green-600 sm:size-6 md:size-7" />
-            <h1 className="font-sans text-xl font-bold sm:text-2xl md:text-3xl">
-              Order Confirmed
-            </h1>
-          </div>
-          <p className="mx-auto max-w-lg text-sm">
-            Thank you for your purchase. We&apos;ve sent a confirmation to{" "}
-            <strong>{session.customerEmail}</strong>
-          </p>
-        </div>
-
-        <section className="bg-card group border-border block h-auto overflow-hidden border shadow-xs">
-          <p className="border-b p-6 text-xs font-medium tracking-widest uppercase md:px-8">
-            Order Details
-          </p>
-
-          <div className="border-b px-6 md:px-8">
-            <div className="flex flex-1 flex-col py-6">
-              {/* Items with images */}
-              {session.lineItems && session.lineItems.length > 0 && (
-                <div className="space-y-4">
-                  {session.lineItems.map((item) => (
-                    <div
-                      key={`${item.name}-${item.quantity}-${item.amount}`}
-                      className="flex items-center gap-4"
-                    >
-                      {/* Product image thumbnail */}
-                      {item.imageUrl ? (
-                        <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md border bg-white">
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.name || "Product"}
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-12 w-12 flex-shrink-0 rounded-md border bg-gray-100" />
-                      )}
-                      <div className="flex flex-1 justify-between text-sm">
-                        <span className="text-zinc-600 dark:text-zinc-400">
-                          {item.name} × {item.quantity}
-                        </span>
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {formatPrice(item.amount / 100)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Total (unchanged) */}
-              <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-                <div className="flex justify-between text-base font-semibold">
-                  <span className="text-zinc-900 dark:text-zinc-100">
-                    Total
-                  </span>
-                  <span className="text-zinc-900 dark:text-zinc-100">
-                    {formatPrice((session.amountTotal ?? 0) / 100)}
-                  </span>
-                </div>
+    <div className="py-8 md:py-12">
+      <Container size="xs" className="max-w-3xl">
+        <div className="bg-card overflow-hidden border shadow-xs">
+          {/* Success Header */}
+          <div className="to-background border-b bg-linear-to-b from-green-50 px-8 py-10 dark:from-green-950/30">
+            <div className="mx-auto flex max-w-lg flex-col items-center text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+                <CheckCheckIcon className="h-8 w-8 text-green-600" />
               </div>
-            </div>
-          </div>
 
-          {/* Address and status sections unchanged */}
-          {address && (
-            <div className="border-b p-6 md:px-8">
-              <p className="text-xs font-medium tracking-widest uppercase">
-                Shipping To
+              <h1 className="text-3xl font-bold">Order Confirmed</h1>
+
+              <p className="text-muted-foreground mt-2">
+                Thank you for your purchase.
               </p>
-              <div className="mt-4 space-y-0.5 text-sm">
-                {session.customerName && <p>{session.customerName}</p>}
-                {address.line1 && <p>{address.line1}</p>}
-                {address.line2 && <p>{address.line2}</p>}
-                <p>
-                  {[address.city, address.state, address.postal_code]
-                    .filter(Boolean)
-                    .join(", ")}
-                </p>
-                {address.country && <p>{address.country}</p>}
-              </div>
-            </div>
-          )}
 
-          <div className="border-b p-6 md:px-8">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <VscPackage className="size-4" />
-                <p className="text-xs font-medium tracking-widest uppercase">
-                  Payment Status:
-                </p>
-              </div>
-              <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                <Badge
-                  className={cn(
-                    "flex items-center gap-1 border",
-                    status.className,
-                  )}
-                >
-                  <status.icon
-                    className={cn(
-                      "size-3.5!",
-                      status.value === "pending" && "animate-spin",
-                    )}
-                  />
-                  <span className="font-sans text-xs font-medium">
-                    {status.label}
-                  </span>
-                </Badge>
-              </span>
+              <p className="mt-1 text-sm">
+                Confirmation sent to{" "}
+                <span className="font-medium">{session.customerEmail}</span>
+              </p>
             </div>
           </div>
-        </section>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Link
-            href="/my-orders"
-            className={buttonVariants({
-              size: "lg",
-              variant: "outline",
-              className: "bg-card!",
-            })}
-          >
-            <span>View Your Orders</span>
-          </Link>
-          <Link
-            href="/pre-made-dresses"
-            className={buttonVariants({ size: "lg" })}
-          >
-            <span>Continue Shopping</span>
-          </Link>
+          {/* Products */}
+          <div className="p-6 md:p-8">
+            <h2 className="mb-5 font-sans text-sm font-semibold tracking-wider uppercase">
+              Items Ordered
+            </h2>
+
+            <div className="space-y-3">
+              {session.lineItems?.map((item) => (
+                <div
+                  key={`${item.name}-${item.quantity}`}
+                  className="flex items-center gap-4 border p-4"
+                >
+                  <div className="bg-muted relative h-16 w-16 overflow-hidden">
+                    {item.imageUrl && (
+                      <Image
+                        fill
+                        src={item.imageUrl}
+                        alt={item.name || ""}
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-muted-foreground text-sm">
+                      Quantity: {item.quantity}
+                    </p>
+                  </div>
+
+                  <p className="font-semibold">
+                    {formatPrice(item.amount / 100)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Total */}
+            <div className="bg-muted/50 mt-6 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-medium">Total</span>
+
+                <span className="text-lg font-bold">
+                  {formatPrice((session.amountTotal ?? 0) / 100)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info Grid */}
+          <div className="grid gap-6 border-t p-6 md:grid-cols-2 md:p-8">
+            {address && (
+              <div>
+                <h3 className="mb-3 font-sans text-sm font-semibold tracking-wider uppercase">
+                  Shipping Address
+                </h3>
+
+                <div className="text-muted-foreground space-y-1 text-sm">
+                  <p>{session.customerName}</p>
+                  <p>{address.line1}</p>
+                  {address.line2 && <p>{address.line2}</p>}
+                  <p>
+                    {[address.city, address.state, address.postal_code]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </p>
+                  <p>{address.country}</p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="mb-3 font-sans text-sm font-semibold tracking-wider uppercase">
+                Payment Status
+              </h3>
+
+              <Badge
+                className={cn("rounded-full px-3 py-1.5", status.className)}
+              >
+                <status.icon
+                  className={cn(
+                    "mr-1 h-3.5 w-3.5",
+                    status.value === "pending" && "animate-spin",
+                  )}
+                />
+                {status.label}
+              </Badge>
+            </div>
+          </div>
         </div>
       </Container>
     </div>

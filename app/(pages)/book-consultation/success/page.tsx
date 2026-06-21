@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { client, writeClient } from "@/sanity/lib/client";
 import { resend } from "@/lib/resend";
 import AdminBookingNotificationEmail from "@/components/emails/admin-booking-notification";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import Link from "next/link";
 
 export default async function SuccessPage({
@@ -17,6 +17,7 @@ export default async function SuccessPage({
     redirect("/book-consultation");
   }
 
+  const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   if (session.payment_status !== "paid") {
     return (

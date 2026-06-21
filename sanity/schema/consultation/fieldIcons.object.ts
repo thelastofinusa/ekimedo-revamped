@@ -8,21 +8,46 @@ export const fieldIconsType = defineType({
   fields: [
     defineField({
       name: "start",
-      title: "Start Icon",
-      type: "string",
-      description: "React Icon or Lucide icon name.",
-      components: {
-        input: ReactIconsIconInput,
-      },
+      title: "Start",
+      type: "object",
+      fields: [
+        defineField({
+          name: "icon",
+          title: "Icon",
+          type: "string",
+          description: "Search for an icon name and select",
+          components: {
+            input: ReactIconsIconInput,
+          },
+        }),
+        defineField({
+          name: "value",
+          title: "Value",
+          type: "string",
+        }),
+      ],
     }),
 
     defineField({
       name: "end",
-      title: "End Value",
-      type: "string",
-      components: {
-        input: ReactIconsIconInput,
-      },
+      title: "End",
+      type: "object",
+      fields: [
+        defineField({
+          name: "icon",
+          title: "Icon",
+          type: "string",
+          description: "Search for an icon name and select",
+          components: {
+            input: ReactIconsIconInput,
+          },
+        }),
+        defineField({
+          name: "value",
+          title: "Value",
+          type: "string",
+        }),
+      ],
     }),
   ],
 });

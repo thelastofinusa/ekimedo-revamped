@@ -11,7 +11,7 @@ import {
   ZSchemaType,
 } from "@/lib/validators";
 import { toast } from "sonner";
-import { cn, sleep } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   Form,
   FormControl,
@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/file-upload";
 import { ImagePlusIcon, XIcon } from "lucide-react";
 import Link from "next/link";
+import { submitContactInquiry } from "../actions";
 
 export const InquiryForm = () => {
   const [isSubmitting, startTransition] = React.useTransition();
@@ -63,16 +64,46 @@ export const InquiryForm = () => {
   });
 
   async function onSubmit(values: ZSchemaType["inquiry"]) {
-    toast.loading("Submitting Inquiry...", { id: "submitting" });
+    const formData = new FormData();
+
+    // Append all text fields
+    formData.append("fullName", values.fullName);
+    formData.append("email", values.email);
+    formData.append("phone", values.phone);
+    formData.append("eventType", values.eventType);
+    formData.append(
+      "eventDate",
+      values.eventDate ? values.eventDate.toISOString() : "",
+    );
+    formData.append("budget", String(values.budget));
+    formData.append("dreamDress", values.dreamDress);
+
+    // Append files
+    if (values.inspirationPhotos) {
+      for (const file of values.inspirationPhotos) {
+        formData.append("inspirationPhotos", file);
+      }
+    }
+
+    toast.loading("Submitting inquiry. Please wait..", {
+      id: "submitting-inquiry",
+    });
+
     startTransition(async () => {
-      await sleep(8000);
-      toast.dismiss("submitting");
-      console.log(values);
-      toast.success("Inquiry submitted successfully", {
-        description:
-          "Thank you for your custom order inquiry. We will get back to you within 24-48 hours.",
-      });
-      form.reset();
+      const result = await submitContactInquiry(formData);
+      toast.dismiss("submitting-inquiry");
+
+      if (result.success) {
+        toast.success("Inquiry submitted successfully", {
+          description:
+            "Thank you for your custom order inquiry. We will get back to you within 24-48 hours.",
+        });
+        form.reset();
+      } else {
+        toast.error("Submission failed!", {
+          description: result.error,
+        });
+      }
     });
   }
 

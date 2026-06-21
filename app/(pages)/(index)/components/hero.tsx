@@ -1,5 +1,5 @@
 import { HeroSlides } from "./slides";
-import { HERO_QUERY } from "@/sanity/queries/hero.query";
+import { HERO_QUERY } from "@/sanity/queries/hero";
 import { client, clientOptions } from "@/sanity/lib/client";
 
 export const HeroComp = async () => {

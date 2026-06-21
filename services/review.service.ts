@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
 import { writeClient } from "@/sanity/lib/client";
+import { resend } from "@/lib/resend";
+import AdminReviewNotificationEmail from "@/components/emails/adminReviewNotification.email";
 
 interface UserInfo {
   id: string;
@@ -50,6 +52,7 @@ export async function createReviewService(formData: FormData, user: UserInfo) {
 
     // at the top, add a fetch
     let avatarAsset = null;
+    const updatedAssets: string[] = [];
     if (user.imageUrl) {
       try {
         const response = await fetch(user.imageUrl);
@@ -62,6 +65,7 @@ export async function createReviewService(formData: FormData, user: UserInfo) {
             filename: `avatar-${user.id}.jpg`, // or extract original name
           },
         );
+        updatedAssets.push(avatarAsset.url);
       } catch (err) {
         console.warn("Failed to upload Clerk avatar, skipping.", err);
         // continue without the avatar
@@ -70,7 +74,7 @@ export async function createReviewService(formData: FormData, user: UserInfo) {
 
     const clientName = user.fullName || user.firstName || "Anonymous Client";
 
-    await writeClient.create({
+    const updatedReview = await writeClient.create({
       _type: "testimonial",
       status: "pending",
       name: clientName,
@@ -88,6 +92,21 @@ export async function createReviewService(formData: FormData, user: UserInfo) {
           }
         : undefined,
       workAssets: uploadedAssets.length > 0 ? uploadedAssets : undefined,
+    });
+
+    // 7. Send customer email
+    await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL!,
+      to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
+      subject: `New review received from ${updatedReview.name}`,
+      react: AdminReviewNotificationEmail({
+        fullName: updatedReview.name,
+        service: updatedReview.service,
+        rating: updatedReview.rating,
+        testimonialId: updatedReview._id,
+        review: updatedReview.review,
+        images: updatedAssets,
+      }),
     });
 
     return { success: true };

@@ -21,7 +21,6 @@ export const CONSULTATION_QUERY = defineQuery(`
 
   formCards[] {
     title,
-    "id": id.current,
     info,
     description,
 
@@ -46,8 +45,14 @@ export const CONSULTATION_QUERY = defineQuery(`
       size,
 
       icons {
-        start,
-        end
+        start {
+          icon,
+          value
+        },
+        end {
+          icon,
+          value
+        }
       },
 
       sizes[],
@@ -100,7 +105,6 @@ export const CONSULTATION_BY_SLUG_QUERY = defineQuery(`
 
   formCards[] {
     title,
-    "id": id.current,
     info,
     description,
 
@@ -125,8 +129,14 @@ export const CONSULTATION_BY_SLUG_QUERY = defineQuery(`
       size,
 
       icons {
-        start,
-        end
+        start {
+          icon,
+          value
+        },
+        end {
+          icon,
+          value
+        }
       },
 
       sizes[],

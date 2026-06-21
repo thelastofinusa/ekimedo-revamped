@@ -48,7 +48,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { submitReview } from "../actions";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission.query";
+import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission";
 import { ClerkLoaded, ClerkLoading, useUser } from "@clerk/nextjs";
 
 export const NewReviewForm = () => {

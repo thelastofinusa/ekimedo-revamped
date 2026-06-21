@@ -5,14 +5,25 @@ import { FaApplePay, FaGooglePay, FaStripe } from "react-icons/fa";
 import { Logo } from "./logo";
 import { Container } from "./container";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { cn, getIcon } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { siteConfig } from "@/config/site.config";
 import { footerRoutes } from "@/constants/navigation";
 import { Route } from "next";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { SOCIAL_QUERY } from "@/sanity/queries/socials.query";
-import { BUSINESS_HOUR_QUERY } from "@/sanity/queries/hours.query";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
+import { BUSINESS_HOUR_QUERY } from "@/sanity/queries/hours";
+import { resolveIcon } from "@/lib/icons-registry";
+
+// Helper to format "HH:mm" to "h:mm AM/PM"
+function formatTimeTo12Hour(timeStr: string | null | undefined): string {
+  if (!timeStr) return "";
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  if (isNaN(hours) || isNaN(minutes)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${String(minutes).padStart(2, "0")} ${ampm}`;
+}
 
 export const Footer = async () => {
   const businessHours = await client.fetch(
@@ -70,7 +81,7 @@ export const Footer = async () => {
             <div className="flex items-center gap-2.5">
               {socialHandles &&
                 socialHandles.map((social) => {
-                  const Icon = getIcon(social.icon);
+                  const Icon = resolveIcon(social.icon);
 
                   return (
                     <Tooltip key={social._id}>
@@ -123,7 +134,7 @@ export const Footer = async () => {
 
         {businessHours?.hours && businessHours.hours.length > 0 && (
           <div className="py-16">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
               {businessHours?.hours?.map((item) => {
                 const active = isToday(item.day || "");
 
@@ -184,12 +195,7 @@ export const Footer = async () => {
                       )}
                     >
                       {item.isOpen
-                        ? `${
-                            item.startTime
-                              ? item.startTime.replace(":00", "")
-                              : ""
-                          } to
-                          ${item.endTime ? item.endTime.replace(":00", "") : ""}`
+                        ? `${formatTimeTo12Hour(item.startTime)} – ${formatTimeTo12Hour(item.endTime)}`
                         : active
                           ? "Not available today"
                           : "Unavailable"}

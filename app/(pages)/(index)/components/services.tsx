@@ -7,7 +7,7 @@ import { Container } from "@/components/shared/container";
 import { buttonVariants } from "@/components/ui/button";
 import { formatDuration, formatPrice } from "@/lib/format";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { CONSULTATION_QUERY } from "@/sanity/queries/consultation.query";
+import { CONSULTATION_QUERY } from "@/sanity/queries/consultation";
 
 export const ConsultationsComp = async () => {
   const consultations = await client.fetch(

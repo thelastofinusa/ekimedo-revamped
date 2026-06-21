@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 
 import { Container } from "@/components/shared/container";
 import { CANCELLATION_POLICY_QUERY_RESULT } from "@/sanity.types";
-import { getIcon } from "@/lib/utils";
+import { resolveIcon } from "@/lib/icons-registry";
 
 export const Policy: React.FC<{
   policies: CANCELLATION_POLICY_QUERY_RESULT;
@@ -13,7 +13,7 @@ export const Policy: React.FC<{
       <Container size="xs" className="flex flex-col gap-6">
         <div className="bg-card border-border grid h-auto gap-6 overflow-hidden rounded-md border p-6 text-sm shadow-xs md:gap-8 md:p-8 xl:gap-12 xl:p-12">
           {policies.map((policy, index) => {
-            const Icon = getIcon(policy.icon);
+            const Icon = resolveIcon(policy.icon);
 
             return (
               <motion.div

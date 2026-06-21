@@ -2,7 +2,7 @@ export const FORCE_ACTIVE_ROUTES = [
   "/about-us",
   "/contact-us",
   "/pre-made-dresses/",
-  "/orders/",
+  "/my-orders/",
   "/checkout",
   "/checkout/success",
 ];

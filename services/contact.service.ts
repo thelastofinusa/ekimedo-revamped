@@ -1,6 +1,6 @@
 import { zSchema, ZSchemaType } from "@/lib/validators";
-import { logoBase64, resend } from "@/lib/resend";
-import { ContactEmail } from "@/components/emails/contact.email";
+import { resend } from "@/lib/resend";
+import ContactEmail from "@/components/emails/contactForm.email";
 
 export async function createContactMessageService(
   formData: ZSchemaType["contact"],
@@ -16,7 +16,6 @@ export async function createContactMessageService(
   }
 
   const { fName, lName, email, phone, inquiryType, message } = formData;
-  const fullName = `${fName} ${lName}`.trim();
 
   try {
     await resend.emails.send({
@@ -25,19 +24,13 @@ export async function createContactMessageService(
       replyTo: email,
       subject: `New Contact Form Submission - ${inquiryType}`,
       react: ContactEmail({
-        fullName,
+        fName,
+        lName,
         email,
         phone,
         inquiryType,
         message,
       }),
-      attachments: [
-        {
-          filename: "logo.png",
-          content: logoBase64,
-          contentId: "logo",
-        },
-      ],
     });
 
     return {

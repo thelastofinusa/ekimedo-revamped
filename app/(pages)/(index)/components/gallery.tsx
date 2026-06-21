@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { Container } from "@/components/shared/container";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { FEATURED_GALLERY_QUERY } from "@/sanity/queries/gallery.query";
+import { FEATURED_GALLERY_QUERY } from "@/sanity/queries/gallery";
 
 export const GalleryComp = async () => {
   const gallery = await client.fetch(

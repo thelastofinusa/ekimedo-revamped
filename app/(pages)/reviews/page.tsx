@@ -6,7 +6,7 @@ import { Container } from "@/components/shared/container";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { REVIEW_QUERY } from "@/sanity/queries/review.query";
+import { REVIEW_QUERY } from "@/sanity/queries/review";
 
 export const metadata: Metadata = {
   title: "Client Reviews",

@@ -7,8 +7,7 @@ import { CONSULTATION_QUERY_RESULT } from "@/sanity.types";
 
 export const Consultations: React.FC<{
   data: CONSULTATION_QUERY_RESULT;
-  messageType?: "success" | "canceled" | null;
-}> = ({ data, messageType }) => {
+}> = ({ data }) => {
   return (
     <div className="py-24 lg:py-32">
       <Container>

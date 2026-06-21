@@ -13,17 +13,6 @@ export const formCardType = defineType({
     }),
 
     defineField({
-      name: "id",
-      title: "ID",
-      type: "slug",
-      options: {
-        source: "title",
-      },
-      description: "Unique identifier used by the frontend.",
-      validation: (rule) => rule.required(),
-    }),
-
-    defineField({
       name: "info",
       title: "Info Banner",
       type: "string",
@@ -49,7 +38,7 @@ export const formCardType = defineType({
   preview: {
     select: {
       title: "title",
-      subtitle: "id",
+      subtitle: "description",
     },
   },
 });

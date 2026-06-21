@@ -17,9 +17,9 @@ import {
 import { Metadata } from "next";
 import { ContactForm } from "./components/contact-form";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { CATEGORIES_QUERY } from "@/sanity/queries/category.query";
-import { SOCIAL_QUERY } from "@/sanity/queries/socials.query";
-import { FAQ_QUERY } from "@/sanity/queries/faq.query";
+import { CATEGORIES_QUERY } from "@/sanity/queries/category";
+import { SOCIAL_QUERY } from "@/sanity/queries/socials";
+import { FAQ_QUERY } from "@/sanity/queries/faq";
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -98,11 +98,24 @@ const bookingProcess = [
 export default async function ContactUs() {
   const faqs = await client.fetch(FAQ_QUERY, {}, clientOptions);
   const categories = await client.fetch(CATEGORIES_QUERY, {}, clientOptions);
+  const consultations = await client.fetch(
+    `*[_type == "consultation"] {
+    _id,
+    "name": title,
+    "slug": slug.current,
+  }`,
+    {},
+    clientOptions,
+  );
   const socialHandles = await client.fetch(SOCIAL_QUERY, {}, clientOptions);
 
   return (
     <div className="flex-1 overflow-x-clip">
-      <ContactForm categories={categories} socialHandles={socialHandles} />
+      <ContactForm
+        categories={categories}
+        consultations={consultations}
+        socialHandles={socialHandles}
+      />
 
       {faqs.length > 0 && (
         <div className="bg-foreground text-background py-24 lg:py-32">

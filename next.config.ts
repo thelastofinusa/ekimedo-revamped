@@ -5,7 +5,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [],
   experimental: {
     typedEnv: true,
+    serverActions: {
+      bodySizeLimit: "40mb",
+    },
   },
+
   images: {
     remotePatterns: [
       {
@@ -18,7 +22,7 @@ const nextConfig: NextConfig = {
         pathname: `/images/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_DATASET}/**`,
       },
     ],
-    // unoptimized: true,
+    unoptimized: true,
     qualities: [100, 80],
     formats: ["image/webp", "image/avif"],
   },

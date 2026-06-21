@@ -80,3 +80,19 @@ export function formatInitials(value: string): string {
   if (words.length === 1) return words[0].charAt(0).toUpperCase();
   return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
 }
+
+export function formatTimeTo12Hour(timeStr: string): string {
+  if (!timeStr) return "";
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  if (isNaN(hours) || isNaN(minutes)) return timeStr;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  return `${hour12}:${String(minutes).padStart(2, "0")} ${ampm}`;
+}
+
+export function formatOrderNumber(
+  orderNumber: string | null | undefined,
+): string {
+  if (!orderNumber) return "N/A";
+  return orderNumber.split("-").pop() ?? orderNumber;
+}

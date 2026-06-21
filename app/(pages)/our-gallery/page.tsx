@@ -1,8 +1,8 @@
 import * as React from "react";
 import { SplashScreen } from "@/components/shared/splash-screen";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { CATEGORIES_QUERY } from "@/sanity/queries/category.query";
-import { GALLERY_QUERY } from "@/sanity/queries/gallery.query";
+import { CATEGORIES_QUERY } from "@/sanity/queries/category";
+import { GALLERY_QUERY } from "@/sanity/queries/gallery";
 import { GallerySection } from "./components/gallery.sec";
 
 export default async function OurGallery() {

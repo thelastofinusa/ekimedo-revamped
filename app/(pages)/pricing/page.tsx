@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { siteConfig } from "@/config/site.config";
 import { formatPrice } from "@/lib/format";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { PRICING_TIERS_QUERY } from "@/sanity/queries/pricing.query";
+import { PRICING_TIERS_QUERY } from "@/sanity/queries/pricing";
 import {
   CheckCheckIcon,
   RulerIcon,

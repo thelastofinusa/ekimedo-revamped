@@ -18,6 +18,12 @@ import { fieldInterestType } from "./schema/consultation/fieldInterest.object";
 import { fieldItemType } from "./schema/consultation/fieldItem.object";
 import { fieldRangeType } from "./schema/consultation/fieldRange.object";
 import { formCardType } from "./schema/consultation/formCard.object";
+import { blockedSlotType } from "./schema/blockedSlot.schema";
+import { bookingType } from "./schema/booking.schema";
+import { colorType } from "./schema/color.schema";
+import { productType } from "./schema/product.schema";
+import { orderType } from "./schema/order.schema";
+import { inquiryType } from "./schema/inquiry.schema";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -31,6 +37,12 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     faqType,
     pricingTierType,
     businessHoursType,
+    blockedSlotType,
+    bookingType,
+    colorType,
+    productType,
+    orderType,
+    inquiryType,
     // consultation
     consultationType,
     formCardType,

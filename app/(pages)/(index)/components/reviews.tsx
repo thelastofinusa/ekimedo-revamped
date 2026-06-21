@@ -5,7 +5,7 @@ import { Container } from "@/components/shared/container";
 import { formatDate, formatInitials } from "@/lib/format";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { REVIEW_QUERY } from "@/sanity/queries/review.query";
+import { REVIEW_QUERY } from "@/sanity/queries/review";
 
 export const ReviewsComp = async () => {
   const reviews = await client.fetch(REVIEW_QUERY, {}, clientOptions);

@@ -1,5 +1,5 @@
 import { TbBrandPaypalFilled } from "react-icons/tb";
-import { BsStripe } from "react-icons/bs";
+import { PiStripeLogo } from "react-icons/pi";
 
 export const FILE_SIZE_MB = 5 * 1024 * 1024;
 
@@ -15,7 +15,7 @@ export const preferredPaymentMethod = [
   {
     id: "stripe",
     label: "Stripe",
-    icon: BsStripe,
+    icon: PiStripeLogo,
     description: "Fast, secure card payment.",
     disabled: false,
   },
@@ -74,9 +74,13 @@ export type ConsultationDataType = Array<{
       sizes?: unknown[];
       icons?: {
         start: {
-          icon: string;
+          icon?: string;
+          value?: string;
         };
-        end?: { value?: string };
+        end?: {
+          icon?: string;
+          value?: string;
+        };
       };
       defaultValue?: string | number;
       options?: unknown[];

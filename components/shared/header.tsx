@@ -36,7 +36,9 @@ import { Separator } from "../ui/separator";
 import { FORCE_ACTIVE_ROUTES } from "@/constants/others";
 import { Skeleton } from "@/components/ui/skeleton";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission.query";
+import { REVIEW_PERMISSION_QUERY } from "@/sanity/queries/permission";
+import { useTotalItems } from "../providers/cart.provider";
+import { CartSheet } from "../sheets/cart.sheet";
 
 export const Header = () => {
   const pathname = usePathname();
@@ -47,12 +49,15 @@ export const Header = () => {
   const [hasPermission, setHasPermission] = React.useState<boolean>(true);
 
   const isDynamicShopRoute =
-    (pathname.startsWith("/shop/") && pathname !== "/shop") ||
-    (pathname.startsWith("/orders/") && pathname !== "/orders");
+    (pathname.startsWith("/pre-made-dresses/") &&
+      pathname !== "/pre-made-dresses") ||
+    (pathname.startsWith("/my-orders/") && pathname !== "/my-orders");
 
+  const totalItems: number = useTotalItems();
   const lastScrollY = React.useRef<number>(0);
   const scrollTimeout = React.useRef<NodeJS.Timeout | null>(null);
   const [isActive, setIsActive] = React.useState<boolean>(false);
+  const [openCart, setOpenCart] = React.useState<boolean>(false);
   const [isScrolling, setIsScrolling] = React.useState<boolean>(false);
 
   const forceActive = React.useMemo(
@@ -210,14 +215,20 @@ export const Header = () => {
 
         <div className="flex w-full max-w-[150px] justify-end">
           <div className="pointer-events-auto flex items-center gap-2">
-            <Button
-              // size={totalItems > 0 ? "sm" : "icon-sm"}
-              size="icon-sm"
-              variant={isActive ? "default" : "secondary"}
-            >
-              <ShoppingBagIcon className="size-4" />
-              <span className="sr-only">Open cart (10 items)</span>
-            </Button>
+            <CartSheet openCart={openCart} setOpenCart={setOpenCart}>
+              <Button
+                size={totalItems > 0 ? "sm" : "icon-sm"}
+                variant={isActive ? "default" : "secondary"}
+              >
+                <ShoppingBagIcon className="size-4" />
+                {totalItems > 0 && (
+                  <span className="font-mono text-xs tracking-tighter">
+                    [{totalItems > 99 ? "99+" : totalItems}]
+                  </span>
+                )}
+                <span className="sr-only">Open cart ({totalItems} items)</span>
+              </Button>
+            </CartSheet>
 
             <Button
               size="icon-sm"

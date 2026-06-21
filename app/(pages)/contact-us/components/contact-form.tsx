@@ -2,7 +2,6 @@
 import Link from "next/link";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { IconType } from "react-icons/lib";
 import { ContactIcon, MailIcon, XIcon } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -42,12 +41,14 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { getIcon } from "@/lib/utils";
+import { resolveIcon } from "@/lib/icons-registry";
 
 export const ContactForm: React.FC<{
   categories: CATEGORIES_QUERY_RESULT;
   socialHandles: SOCIAL_QUERY_RESULT;
-}> = ({ categories, socialHandles }) => {
+  consultations: { _id: string; name: string; slug: string }[];
+}> = ({ categories, socialHandles, consultations }) => {
+  const whatItsAbout = [...categories, ...consultations];
   const [isCustomSelected, setIsCustomSelected] =
     React.useState<boolean>(false);
   const [isSubmitting, startTransition] = React.useTransition();
@@ -70,7 +71,8 @@ export const ContactForm: React.FC<{
       inquiryType:
         values.inquiryType === "custom"
           ? (values.customField as string)
-          : values.inquiryType,
+          : (whatItsAbout.find((cat) => cat.slug === values.inquiryType)
+              ?.name ?? values.inquiryType),
     };
 
     toast.loading("Submitting message. Please wait..", {
@@ -155,7 +157,7 @@ export const ContactForm: React.FC<{
                 <div className="flex items-center gap-2.5">
                   {socialHandles &&
                     socialHandles.map((social) => {
-                      const Icon = getIcon(social.icon);
+                      const Icon = resolveIcon(social.icon);
 
                       return (
                         <Tooltip key={social._id}>
@@ -337,9 +339,9 @@ export const ContactForm: React.FC<{
 
                             <SelectContent>
                               <SelectGroup>
-                                {categories.length > 0 &&
-                                  categories.map(
-                                    (type: (typeof categories)[number]) => (
+                                {whatItsAbout.length > 0 &&
+                                  whatItsAbout.map(
+                                    (type: (typeof whatItsAbout)[number]) => (
                                       <SelectItem
                                         key={type._id}
                                         value={type.slug!}

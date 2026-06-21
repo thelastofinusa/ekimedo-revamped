@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { RiTimerLine } from "react-icons/ri";
+import { TimeInput } from "../components/TimeInput";
 
 export const businessHoursType = defineType({
   name: "businessHours",
@@ -45,30 +46,46 @@ export const businessHoursType = defineType({
               name: "startTime",
               title: "Start Time",
               type: "string",
+              components: {
+                input: TimeInput,
+              },
               hidden: ({ parent }) => parent?.isOpen === false,
               validation: (rule) =>
-                rule.custom((value, context) => {
-                  const parent = context.parent as { isOpen?: boolean } | undefined;
-                  if (parent?.isOpen && !value) {
-                    return "Start time is required when open";
-                  }
-                  return true;
-                }),
+                rule
+                  .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+                  .error('Must be in HH:mm format (e.g., "09:00")')
+                  .custom((value, context) => {
+                    const parent = context.parent as
+                      | { isOpen?: boolean }
+                      | undefined;
+                    if (parent?.isOpen && !value) {
+                      return "Start time is required when open";
+                    }
+                    return true;
+                  }),
             }),
 
             defineField({
               name: "endTime",
               title: "End Time",
               type: "string",
+              components: {
+                input: TimeInput,
+              },
               hidden: ({ parent }) => parent?.isOpen === false,
               validation: (rule) =>
-                rule.custom((value, context) => {
-                  const parent = context.parent as { isOpen?: boolean } | undefined;
-                  if (parent?.isOpen && !value) {
-                    return "End time is required when open";
-                  }
-                  return true;
-                }),
+                rule
+                  .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+                  .error('Must be in HH:mm format (e.g., "17:00")')
+                  .custom((value, context) => {
+                    const parent = context.parent as
+                      | { isOpen?: boolean }
+                      | undefined;
+                    if (parent?.isOpen && !value) {
+                      return "End time is required when open";
+                    }
+                    return true;
+                  }),
             }),
           ],
           preview: {

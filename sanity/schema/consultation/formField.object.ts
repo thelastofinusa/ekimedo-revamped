@@ -96,8 +96,9 @@ export const formFieldType = defineType({
 
     defineField({
       name: "size",
-      title: "File Size Limit",
+      title: "File Size Limit (MB)",
       type: "number",
+      description: "Maximum file size in megabytes (e.g., 2 = 2MB)",
     }),
 
     defineField({

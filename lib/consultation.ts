@@ -1,4 +1,5 @@
 import { Consultation, FormField } from "@/sanity.types";
+import { format } from "date-fns";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { z } from "zod";
 
@@ -10,22 +11,40 @@ const fieldToZod = (field: FormField) => {
     case "size":
     case "textarea":
     case "select":
-      schema = field.required ? z.string().min(2, field.errMsg) : z.string();
+      schema = field.required
+        ? z
+            .string({
+              error: field.errMsg ?? "This field is required",
+            })
+            .min(1, field.errMsg)
+        : z.string();
       break;
 
     case "tel": {
-      const base = z
+      const phoneValidator = z
         .string()
         .trim()
         .refine(isValidPhoneNumber, {
           message: field.errMsg ?? "Invalid phone number",
         });
-      schema = field.required ? base : base.optional();
+      if (field.required) {
+        schema = z
+          .string({ error: field.errMsg ?? "This field is required" })
+          .refine(isValidPhoneNumber, {
+            message: field.errMsg ?? "Invalid phone number",
+          });
+      } else {
+        schema = phoneValidator.or(z.literal("")).optional();
+      }
       break;
     }
 
     case "email":
-      schema = field.required ? z.email(field.errMsg) : z.email();
+      if (field.required) {
+        schema = z.email(field.errMsg ?? "Invalid email address");
+      } else {
+        schema = z.email("Invalid email address").or(z.literal("")).optional();
+      }
       break;
 
     case "number":
@@ -34,9 +53,11 @@ const fieldToZod = (field: FormField) => {
 
     case "date":
     case "datetime-local":
-      schema = z.coerce.date({
-        error: field.errMsg ?? "Invalid date",
-      });
+      if (field.required) {
+        schema = z.string().min(1, field.errMsg ?? "Please select a date");
+      } else {
+        schema = z.string().optional().nullable();
+      }
       break;
 
     case "checkbox":
@@ -63,12 +84,11 @@ const fieldToZod = (field: FormField) => {
       }
 
       if (field.size) {
+        const sizeBytes = field.size * 1024 * 1024; // MB to bytes
         schema = schema.refine(
-          (files) => files.every((file) => file.size <= field.size!),
+          (files) => files.every((file) => file.size <= sizeBytes),
           {
-            message: `Each file must be smaller than ${
-              field.size / 1024 / 1024
-            }MB`,
+            message: `Each file must be smaller than ${field.size}MB`,
           },
         );
       }
@@ -118,10 +138,7 @@ export function buildZodSchema(formCards: Consultation["formCards"]) {
 
 export function buildDefaultValues(formCards: Consultation["formCards"]) {
   const defaults: Record<string, unknown> = {};
-
-  if (!Array.isArray(formCards)) {
-    return defaults;
-  }
+  if (!Array.isArray(formCards)) return defaults;
 
   formCards.forEach((card) => {
     const fields = (card as { fields?: FormField[] }).fields;
@@ -129,29 +146,40 @@ export function buildDefaultValues(formCards: Consultation["formCards"]) {
     fields.forEach((field) => {
       if (!field || typeof field !== "object") return;
       if (!("name" in field) || !("type" in field)) return;
-      const typedField = field as FormField;
 
-      if (typedField.defaultValue !== undefined) {
-        defaults[typedField.name as string] = typedField.defaultValue;
+      if (field.defaultValue != null) {
+        defaults[field.name as string] = field.defaultValue;
         return;
       }
 
-      switch (typedField.type) {
+      switch (field.type) {
         case "number":
-          defaults[typedField.name as string] = undefined;
+          defaults[field.name as string] = undefined;
           break;
         case "checkbox":
-          defaults[typedField.name as string] = [];
+          defaults[field.name as string] = [];
           break;
-        case "date":
-        case "datetime-local":
-          defaults[typedField.name as string] = undefined;
+        case "date": {
+          const tomorrowDate = new Date();
+          tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+          defaults[field.name as string] = format(tomorrowDate, "yyyy-MM-dd");
           break;
+        }
+        case "datetime-local": {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(10, 0, 0, 0);
+          defaults[field.name as string] = format(
+            tomorrow,
+            "yyyy-MM-dd'T'HH:mm",
+          );
+          break;
+        }
         case "file":
-          defaults[typedField.name as string] = [];
+          defaults[field.name as string] = [];
           break;
         default:
-          defaults[typedField.name as string] = "";
+          defaults[field.name as string] = "";
       }
     });
   });

@@ -1,22 +1,21 @@
+"use client";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/shadcn/button";
 import { Container } from "@/components/shared/container";
-import { client, clientOptions } from "@/sanity/lib/client";
-import { FEATURED_GALLERY_QUERY } from "@/sanity/queries/gallery";
+import { QUERY_GALLERY_RESULT } from "@/sanity.types";
+import { Lightbox } from "@/components/shared/lightbox";
 
-export const GalleryComp = async () => {
-  const gallery = await client.fetch(
-    FEATURED_GALLERY_QUERY,
-    {
-      category: null,
-      start: 0,
-      end: 5,
-    },
-    clientOptions,
-  );
+export const GalleryComp: React.FC<{
+  galleries: QUERY_GALLERY_RESULT;
+}> = (props) => {
+  const [lightbox, setLightbox] = React.useState<{
+    images: string[];
+    initialIndex: number;
+  } | null>(null);
 
   return (
     <div className="bg-background">
@@ -40,11 +39,19 @@ export const GalleryComp = async () => {
 
         <Container>
           <div className="flex gap-4">
-            {gallery.map((item, idx) => (
+            {props.galleries.map((item, idx) => (
               <div
                 key={item._id}
+                onClick={() =>
+                  setLightbox({
+                    images: props.galleries
+                      .map((s) => s.image!)
+                      .filter(Boolean),
+                    initialIndex: idx,
+                  })
+                }
                 className={cn(
-                  "group bg-background/5 border-border/20 relative shrink-0 overflow-hidden border shadow-xs",
+                  "group bg-background/5 cursor-pointer border-border/20 relative shrink-0 overflow-hidden border shadow-xs",
                   {
                     "aspect-3/4 w-[50vw] md:w-[25vw]": idx % 2 === 0,
                     "mt-12 aspect-3/4 w-[40vw] md:mt-20 md:w-[20vw]":
@@ -54,7 +61,7 @@ export const GalleryComp = async () => {
               >
                 <Image
                   src={item.image || "/placeholder.svg"}
-                  alt=""
+                  alt={item.category?.name ?? ""}
                   fill
                   loading="lazy"
                   className="origin-top object-cover transition-all duration-1000 ease-out group-hover:scale-110 group-hover:brightness-80"
@@ -64,6 +71,13 @@ export const GalleryComp = async () => {
           </div>
         </Container>
       </div>
+
+      <Lightbox
+        open={!!lightbox}
+        images={lightbox?.images ?? []}
+        initialIndex={lightbox?.initialIndex ?? 0}
+        onClose={() => setLightbox(null)}
+      />
     </div>
   );
 };

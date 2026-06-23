@@ -5,7 +5,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { Container } from "./container";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/shadcn/button";
 
 export const CTA: React.FC<{
   mode: "dark" | "light";

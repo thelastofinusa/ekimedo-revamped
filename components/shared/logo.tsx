@@ -9,9 +9,7 @@ type LogoVariant = "horizontal" | "wordmark" | "vertical";
 type LogoColor = "charcoal" | "bone";
 
 const getLogoSrc = (variant: LogoVariant | undefined, color: LogoColor) =>
-  variant
-    ? `/assets/logo/${variant}-${color}.svg`
-    : `/assets/logo/${color}.svg`;
+  variant ? `/logo/${variant}-${color}.svg` : `/logo/${color}.svg`;
 
 export const Logo: React.FC<{
   className?: string;

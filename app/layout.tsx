@@ -8,7 +8,7 @@ import { siteConfig } from "@/config/site.config";
 export const metadata: Metadata = {
   title: {
     default: siteConfig.title,
-    template: `%s - ${siteConfig.title}`,
+    template: `%s - ${siteConfig.author.nickname}`,
   },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     images: [
       {
-        url: "/og.png",
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
         alt: siteConfig.title,
@@ -33,15 +33,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: siteConfig.title,
     description: siteConfig.description,
-    images: ["/og.png"],
+    images: ["/opengraph.png"],
   },
   icons: [
     {
-      url: "/assets/logo/charcoal.svg",
+      url: "/logo/charcoal.svg",
       media: "(prefers-color-scheme: light)",
     },
     {
-      url: "/assets/logo/bone.svg",
+      url: "/logo/bone.svg",
       media: "(prefers-color-scheme: dark)",
     },
   ],
@@ -62,12 +62,7 @@ export default function RootLayout(props: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={fontVariables("antialiased")}>
-        <ClerkProvider
-          signInFallbackRedirectUrl="/"
-          signUpFallbackRedirectUrl="/"
-        >
-          {props.children}
-        </ClerkProvider>
+        <ClerkProvider>{props.children}</ClerkProvider>
       </body>
     </html>
   );

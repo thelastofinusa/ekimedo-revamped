@@ -2,6 +2,7 @@ import { Consultation, FormField } from "@/sanity.types";
 import { format } from "date-fns";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { z } from "zod";
+import { MAX_FILES_UPLOAD, MAX_SIZE_UPLOAD } from "./zod";
 
 const fieldToZod = (field: FormField) => {
   let schema: z.ZodTypeAny;
@@ -71,24 +72,23 @@ const fieldToZod = (field: FormField) => {
 
       if (field.required) {
         schema = schema.min(
-          field.min ?? 1,
-          field.errMsg ?? `Please upload at least ${field.min ?? 1} file(s)`,
+          1,
+          field.errMsg ?? `Please upload at least 1 file(s)`,
         );
       }
 
-      if (field.max) {
+      if (MAX_FILES_UPLOAD) {
         schema = schema.max(
-          field.max,
-          `Please upload at most ${field.max} files`,
+          MAX_FILES_UPLOAD,
+          `Please upload at most ${MAX_FILES_UPLOAD} files`,
         );
       }
 
-      if (field.size) {
-        const sizeBytes = field.size * 1024 * 1024; // MB to bytes
+      if (MAX_SIZE_UPLOAD) {
         schema = schema.refine(
-          (files) => files.every((file) => file.size <= sizeBytes),
+          (files) => files.every((file) => file.size <= MAX_SIZE_UPLOAD),
           {
-            message: `Each file must be smaller than ${field.size}MB`,
+            message: `Each file must be smaller than ${MAX_SIZE_UPLOAD}MB`,
           },
         );
       }

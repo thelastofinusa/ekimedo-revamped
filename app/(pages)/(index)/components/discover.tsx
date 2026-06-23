@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 import { siteConfig } from "@/config/site.config";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/shadcn/button";
 import { Container } from "@/components/shared/container";
 
 export const DiscoverComp = () => {
@@ -34,9 +34,9 @@ export const DiscoverComp = () => {
                 <Link
                   href="/about-us"
                   className={buttonVariants({
-                    size: "xl",
+                    size: "lg",
                     variant: "default",
-                    className: "w-full sm:w-max",
+                    className: "w-max",
                   })}
                 >
                   Discover Our Story
@@ -46,7 +46,7 @@ export const DiscoverComp = () => {
 
             <div className="bg-muted relative aspect-4/5 overflow-hidden shadow-xs">
               <Image
-                src="/assets/home/dedication.jpeg"
+                src="/home/dedication.jpeg"
                 alt="Dedication"
                 fill
                 priority

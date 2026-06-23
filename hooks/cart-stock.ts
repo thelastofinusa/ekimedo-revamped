@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 
 import { client } from "@/sanity/lib/client";
-import { PRODUCT_BY_IDS_QUERY } from "@/sanity/queries/product";
+import { QUERY_PRODUCT_BY_IDS } from "@/sanity/queries/product.query";
 import { CartItem } from "@/store/cart.store";
 
 export interface StockInfo {
@@ -46,7 +46,7 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
     setIsLoading(true);
 
     try {
-      const products = await client.fetch(PRODUCT_BY_IDS_QUERY, {
+      const products = await client.fetch(QUERY_PRODUCT_BY_IDS, {
         ids: productIds,
       });
 

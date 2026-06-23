@@ -5,7 +5,7 @@ import React from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/shadcn/button";
 
 interface LightboxProps {
   images: string[];

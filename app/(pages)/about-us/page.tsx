@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { siteConfig } from "@/config/site.config";
 import { Container, containerVariants } from "@/components/shared/container";
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/shadcn/button";
 import Image from "next/image";
 import { CTA } from "@/components/shared/cta";
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: `Learn about ${siteConfig.title}, a luxury couture maison crafting timeless bridal, prom, and special-event designs with meticulous artistry.`,
     images: [
       {
-        url: "/og.png",
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
         alt: siteConfig.title,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "About Us",
     description: `Learn about ${siteConfig.title}, a luxury couture maison crafting timeless bridal, prom, and special-event designs with meticulous artistry.`,
-    images: ["/twitter-image.png"],
+    images: ["/opengraph.png"],
   },
 };
 
@@ -50,7 +50,7 @@ export default function About() {
             <div className="flex flex-col gap-6 md:gap-8 lg:col-span-5 lg:gap-12">
               <div className="bg-secondary relative aspect-4/5 overflow-hidden shadow-xs">
                 <Image
-                  src="/assets/about/01.jpeg"
+                  src="/about/01.jpeg"
                   alt={siteConfig.author.fullName}
                   height={0}
                   width={980}
@@ -85,7 +85,7 @@ export default function About() {
               </div>
               <div className="bg-secondary relative h-[400px] overflow-hidden shadow-xs md:h-[600px]">
                 <Image
-                  src="/assets/about/02.jpeg"
+                  src="/about/02.jpeg"
                   alt="Craftsmanship"
                   fill
                   priority
@@ -124,7 +124,7 @@ export default function About() {
         <Container>
           <div className="flex flex-col gap-8 md:gap-12">
             <Image
-              src="/assets/about/03.jpeg"
+              src="/about/03.jpeg"
               alt="team image"
               height={960}
               width={1420}
@@ -178,7 +178,7 @@ export default function About() {
         description="From bespoke commissions to custom fittings, we collaborate closely to bring considered designs to life."
         route={{
           txt: "Book a Consultation",
-          path: "/book-consultation",
+          path: "/consultations",
         }}
       />
     </div>

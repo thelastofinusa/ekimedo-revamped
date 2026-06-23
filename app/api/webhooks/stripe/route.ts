@@ -3,10 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { client, writeClient } from "@/sanity/lib/client";
-import { sendAdminOrderEmail, sendCustomerOrderEmail } from "@/lib/order-email";
+
+import { QUERY_ORDER_BY_ID } from "@/sanity/queries/orders.query";
+import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
+import { getResend } from "@/lib/resend";
+import { createOrderAndDecrementStock } from "@/actions/order.action";
+import { AdminOrderEmail } from "@/components/emails/admin/adminOrder.email";
+import { randomUUID } from "crypto";
+import { CustomerOrderEmail } from "@/components/emails/customer/customerOrder.email";
 import { siteConfig } from "@/config/site.config";
-import { createOrderAndDecrementStock } from "@/app/(pages)/checkout/actions";
-import { ORDER_BY_ID_QUERY } from "@/sanity/queries/orders";
+import { CustomerBookingEmail } from "@/components/emails/customer/customerBooking.email";
+import { AdminBookingEmail } from "@/components/emails/admin/adminBooking.email";
+import { QUERY_BOOKING_BY_ID } from "@/sanity/queries/booking.query";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -46,6 +54,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   const stripe = getStripe();
+  const resend = getResend();
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
@@ -70,12 +79,144 @@ export async function POST(req: NextRequest) {
   }
 
   const sessionId = session.id;
+  const metadata = session.metadata || {};
+
+  // ... earlier code
+
+  // -----------------------------------------------------------------
+  // HANDLE CONSULTATION BOOKING
+  // -----------------------------------------------------------------
+  if (metadata.bookingId) {
+    const bookingId = metadata.bookingId;
+
+    // Idempotency: check if booking already marked as paid
+    const existingBooking = await client.fetch(
+      `*[_type == "booking" && _id == $id][0]{ _id, status }`,
+      { id: bookingId },
+    );
+
+    if (!existingBooking) {
+      console.error(`Booking ${bookingId} not found.`);
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+
+    if (existingBooking.status === "paid") {
+      console.log(`Booking ${bookingId} already paid, skipping.`);
+      return NextResponse.json({ received: true });
+    }
+
+    // Update booking status to 'paid'
+    try {
+      await writeClient.patch(bookingId).set({ status: "paid" }).commit();
+      console.log(`Booking ${bookingId} marked as paid via webhook.`);
+    } catch (error) {
+      console.error(`Failed to update booking ${bookingId}:`, error);
+      return NextResponse.json(
+        { error: "Failed to update booking" },
+        { status: 500 },
+      );
+    }
+
+    // --- Send emails (fire-and-forget) ---
+    let emailSentAdmin = false;
+    let emailSentCustomer = false;
+
+    try {
+      const booking = await client.fetch(QUERY_BOOKING_BY_ID, {
+        id: bookingId,
+      });
+
+      if (!booking) {
+        console.error(`Booking ${bookingId} not found after update.`);
+        throw new Error("Booking not found for email.");
+      }
+
+      const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);
+
+      // Admin email
+      const { error: adminError } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL!,
+        to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
+        subject: `New Booking: ${booking.consultation?.title} from ${booking.customerName}`,
+        react: AdminBookingEmail({
+          bookingId: booking._id,
+          consultationTitle: booking.consultation?.title || "",
+          dateTime: booking.dateTime || "",
+          customerName: booking.customerName || "",
+          customerEmail: booking.customerEmail || "",
+          customerPhone: booking.customerPhone || "",
+          paymentMethod: booking.paymentMethod || "stripe",
+          formFields: (booking.formFields || []).map((field: any) => ({
+            fieldLabel: field.fieldLabel || "",
+            fieldType: field.fieldType || "",
+            fieldName: field.fieldName || "",
+            value: field.value || "",
+            files: Array.isArray(field.files)
+              ? field.files
+                  .filter((f: any) => f?.asset?.url != null)
+                  .map((f: any) => ({ url: f.asset.url }))
+              : undefined,
+          })),
+          socialHandles,
+        }),
+      });
+      if (!adminError) emailSentAdmin = true;
+
+      // Customer email
+      const { error: customerError } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL!,
+        to: booking.customerEmail as string,
+        subject: `Booking Confirmation: ${booking.consultation?.title || ""}`,
+        react: CustomerBookingEmail({
+          customerName: booking.customerName || "",
+          consultationTitle: booking.consultation?.title || "",
+          dateTime: booking.dateTime || "",
+          bookingId: booking._id,
+          formFields: (booking.formFields || []).map((field: any) => ({
+            fieldLabel: field.fieldLabel || "",
+            fieldType: field.fieldType || "",
+            fieldName: field.fieldName || "",
+            value: field.value || "",
+            files: Array.isArray(field.files)
+              ? field.files
+                  .filter((f: any) => f?.asset?.url != null)
+                  .map((f: any) => ({ url: f.asset.url }))
+              : undefined,
+          })),
+          socialHandles,
+        }),
+      });
+      if (!customerError) emailSentCustomer = true;
+    } catch (emailError) {
+      console.error("Email sending failed for booking", bookingId, emailError);
+    } finally {
+      // Update email statuses
+      await writeClient
+        .patch(bookingId)
+        .set({
+          emailSent: {
+            admin: emailSentAdmin,
+            customer: emailSentCustomer,
+          },
+        })
+        .commit();
+    }
+
+    return NextResponse.json({ received: true });
+  }
+
+  // -----------------------------------------------------------------
+  // HANDLE ORDER (existing logic)
+  // -----------------------------------------------------------------
+  if (!metadata.clerkUserId) {
+    console.error("No clerkUserId or bookingId in session metadata");
+    return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
+  }
+
   const orderId = `order_${sessionId}`;
 
   // Idempotency check: order already exists?
-  const existingOrder = await writeClient.fetch(ORDER_BY_ID_QUERY, {
-    id: orderId,
-  });
+  const existingOrder = await client.fetch(QUERY_ORDER_BY_ID, { id: orderId });
   if (existingOrder) {
     console.log(`Order ${orderId} already exists, skipping.`);
     return NextResponse.json({ received: true });
@@ -107,31 +248,65 @@ export async function POST(req: NextRequest) {
   }> = [];
   let total = 0;
 
-  // Build order items and compute total
+  // For email items, we'll build a list from the line items
+  const emailItems: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    imageUrl: string;
+  }> = [];
+
   for (const item of lineItems) {
     const quantity = item.quantity || 0;
     const unitAmount = item.price?.unit_amount || 0;
     const price = unitAmount / 100;
     total += price * quantity;
 
-    let productId: string | undefined;
     const product = item.price?.product;
-    // Safely check if product is an object with metadata
-    if (product && typeof product === "object" && "metadata" in product) {
-      productId = product.metadata?.productId;
+    // product is an expanded Stripe product
+    let productId: string | undefined;
+    let productName = "Product";
+    let imageUrl = "";
+
+    if (product && typeof product === "object") {
+      // Product metadata has productId
+      if ("metadata" in product) {
+        productId = product.metadata?.productId;
+      }
+      // Product name
+      if ("name" in product && typeof product.name === "string") {
+        productName = product.name;
+      }
+      // Product images (array of strings)
+      if (
+        "images" in product &&
+        Array.isArray(product.images) &&
+        product.images.length > 0
+      ) {
+        imageUrl = product.images[0];
+      }
     }
 
-    if (productId) {
-      orderItemsInput.push({ productId, quantity, priceAtPurchase: price });
-      orderItemsForSanity.push({
-        _key: productId,
-        product: { _type: "reference", _ref: productId },
-        quantity,
-        priceAtPurchase: price,
-      });
-    } else {
-      console.warn("Product ID missing for line item:", item.description);
+    if (!productId) {
+      throw new Error(`Product ID missing for line item: ${item.description}`);
     }
+
+    const uniqueKey = randomUUID();
+
+    orderItemsInput.push({ productId, quantity, priceAtPurchase: price });
+    orderItemsForSanity.push({
+      _key: uniqueKey,
+      product: { _type: "reference", _ref: productId },
+      quantity,
+      priceAtPurchase: price,
+    });
+
+    emailItems.push({
+      name: productName,
+      quantity,
+      price,
+      imageUrl,
+    });
   }
 
   const userId = fullSession.metadata?.clerkUserId;
@@ -190,65 +365,61 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Fetch the created order with product images for email
-  const createdOrder = await client.fetch<{
-    items?: Array<{
-      _key: string;
-      quantity: number | null;
-      priceAtPurchase: number | null;
-      product?: {
-        name: string | null;
-        image: string | null;
-      } | null;
-    }> | null;
-  }>(
-    `*[_type == "order" && _id == $id][0] { 
-      items[] {
-        _key,
-        quantity,
-        priceAtPurchase,
-        product->{
-          name,
-          "image": images[0].asset->url
-        }
-      }
-    }`,
-    { id: orderId },
-  );
+  // After order creation (inside the try block that catches errors)
 
-  // Send emails (fire-and-forget)
+  let emailSentAdmin = false;
+  let emailSentCustomer = false;
+  const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);
+
   try {
-    const itemsForEmail =
-      createdOrder?.items?.map((item) => ({
-        name: item.product?.name || "Product",
-        quantity: item.quantity || 0,
-        price: item.priceAtPurchase || 0,
-        imageUrl: item.product?.image || "",
-      })) || [];
-
-    await Promise.all([
-      sendAdminOrderEmail({
-        orderId: orderId,
+    // Admin email
+    const { error: adminError } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL!,
+      to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
+      subject: `New Order Received: ${orderData.orderNumber}`,
+      react: AdminOrderEmail({
+        orderId,
         orderNumber: orderData.orderNumber,
         customerName: fullSession.customer_details?.name as string,
-        customerEmail: userEmail || "",
-        totalAmount: total,
+        customerEmail: session.customer_email || "",
+        total,
         paymentMethod: "stripe",
         paymentStatus: "paid",
-        items: itemsForEmail,
+        items: emailItems,
+        socialHandles,
       }),
-      sendCustomerOrderEmail({
-        orderNumber: orderData.orderNumber,
+    });
+    if (!adminError) emailSentAdmin = true;
+
+    // Customer email
+    const { error: customerError } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL!,
+      to: session.customer_email || "", // Send to the customer
+      subject: `Order #${orderData.orderNumber} confirmation`,
+      react: CustomerOrderEmail({
         customerName: fullSession.customer_details?.name as string,
+        orderId,
+        orderNumber: orderData.orderNumber,
+        ordersUrl: `${siteConfig.url}/orders`,
         totalAmount: total,
-        items: itemsForEmail,
-        ordersUrl: `${siteConfig.url}/my-orders`,
-        orderId: orderId,
+        items: emailItems,
+        socialHandles,
       }),
-    ]);
+    });
+    if (!customerError) emailSentCustomer = true;
   } catch (emailError) {
-    // Log but don't fail the webhook
     console.error("Email sending failed for order", orderId, emailError);
+  } finally {
+    // Update the order with email statuses
+    await writeClient
+      .patch(orderId)
+      .set({
+        emailSent: {
+          admin: emailSentAdmin,
+          customer: emailSentCustomer,
+        },
+      })
+      .commit();
   }
 
   return NextResponse.json({ received: true });

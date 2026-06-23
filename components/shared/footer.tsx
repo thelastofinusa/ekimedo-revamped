@@ -1,19 +1,39 @@
-import Link from "next/link";
-import { RiVisaLine } from "react-icons/ri";
-import { FaApplePay, FaGooglePay, FaStripe } from "react-icons/fa";
-
-import { Logo } from "./logo";
-import { Container } from "./container";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+"use client";
+import React from "react";
 import { siteConfig } from "@/config/site.config";
+import { cn } from "@/lib/utils";
+import { Container } from "./container";
+import { Logo } from "./logo";
+import { Button, buttonVariants } from "../shadcn/button";
+import { FaApplePay, FaGooglePay, FaStripe } from "react-icons/fa";
+import { RiVisaLine } from "react-icons/ri";
+import { resolveIcon } from "@/lib/icons";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../shadcn/tooltip";
 import { footerRoutes } from "@/constants/navigation";
+import Link from "next/link";
 import { Route } from "next";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { client, clientOptions } from "@/sanity/lib/client";
-import { SOCIAL_QUERY } from "@/sanity/queries/socials";
-import { BUSINESS_HOUR_QUERY } from "@/sanity/queries/hours";
-import { resolveIcon } from "@/lib/icons-registry";
+import {
+  QUERY_BUSINESS_HOURS_RESULT,
+  QUERY_SOCIAL_HANDLES_RESULT,
+} from "@/sanity.types";
+
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function isToday(day: string) {
+  return (
+    new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+    }).format(new Date()) === day
+  );
+}
 
 // Helper to format "HH:mm" to "h:mm AM/PM"
 function formatTimeTo12Hour(timeStr: string | null | undefined): string {
@@ -25,21 +45,66 @@ function formatTimeTo12Hour(timeStr: string | null | undefined): string {
   return `${hour12}:${String(minutes).padStart(2, "0")} ${ampm}`;
 }
 
-export const Footer = async () => {
-  const businessHours = await client.fetch(
-    BUSINESS_HOUR_QUERY,
-    {},
-    clientOptions,
-  );
-  const socialHandles = await client.fetch(SOCIAL_QUERY, {}, clientOptions);
+function isCurrentlyOpen(
+  startTime?: string,
+  endTime?: string,
+  isOpen?: boolean,
+  nowDate?: Date,
+) {
+  if (!isOpen || !startTime || !endTime || !nowDate) return false;
 
-  // Utility to check if the day is "Today" for highlighting
-  const isToday = (dayName: string) => {
-    const today = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
-      new Date(),
-    );
-    return dayName.toLowerCase() === today.toLowerCase();
-  };
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const currentMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
+
+  return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+}
+
+export const Footer: React.FC<{
+  initialHours: QUERY_BUSINESS_HOURS_RESULT;
+  socialHandles: QUERY_SOCIAL_HANDLES_RESULT;
+}> = ({ initialHours, socialHandles }) => {
+  const [now, setNow] = React.useState(new Date());
+
+  // Update the 'now' state every 60 seconds
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 200);
+    return () => clearInterval(timer);
+  }, []);
+
+  const sortedHours =
+    initialHours?.hours?.sort(
+      (a, b) => DAYS.indexOf(a.day as string) - DAYS.indexOf(b.day as string),
+    ) ?? [];
+
+  const todayHours = sortedHours.find((item) => isToday(item.day || ""));
+
+  const openNow = todayHours
+    ? isCurrentlyOpen(
+        todayHours.startTime as string,
+        todayHours.endTime as string,
+        todayHours.isOpen as boolean,
+        now,
+      )
+    : false;
+
+  const status = !todayHours?.isOpen
+    ? {
+        label: "Closed Today",
+        className: "bg-red-500/10 text-red-400 ring-red-500/20",
+      }
+    : openNow
+      ? {
+          label: "Open Now",
+          className: "bg-green-500/10 text-green-400 ring-green-500/20",
+        }
+      : {
+          label: "Currently Closed",
+          className: "bg-amber-500/10 text-amber-400 ring-amber-500/20",
+        };
 
   return (
     <footer className="bg-foreground text-background border-border/20 border-t">
@@ -132,11 +197,37 @@ export const Footer = async () => {
           ))}
         </div>
 
-        {businessHours?.hours && businessHours.hours.length > 0 && (
-          <div className="py-16">
+        {sortedHours && sortedHours.length > 0 && (
+          <div className="gap-6 flex flex-col py-16">
+            <div
+              className={cn(
+                "inline-flex items-center gap-2 w-max rounded-full px-3 py-1 text-xs font-medium ring-1",
+                status.className,
+              )}
+            >
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-current" />
+              </span>
+
+              {status.label}
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-              {businessHours?.hours?.map((item) => {
+              {sortedHours?.map((item) => {
                 const active = isToday(item.day || "");
+
+                const openNow = active
+                  ? isCurrentlyOpen(
+                      item.startTime as string,
+                      item.endTime as string,
+                      item.isOpen as boolean,
+                      now,
+                    )
+                  : false;
+
+                const closedForDay = active && !item.isOpen;
+                const opensLaterOrClosedNow = active && item.isOpen && !openNow;
 
                 return (
                   <div
@@ -145,9 +236,13 @@ export const Footer = async () => {
                       "relative flex flex-col gap-1 p-4 transition-all duration-500 last-of-type:col-span-2 lg:last-of-type:col-span-1",
                       {
                         "bg-green-500/10 shadow-sm ring-1 ring-green-500/20":
-                          active,
+                          active && openNow,
+
+                        "bg-amber-500/10 shadow-sm ring-1 ring-amber-500/20":
+                          opensLaterOrClosedNow,
+
                         "bg-red-500/15 shadow-xs ring-1 ring-red-500/25":
-                          active && !item.isOpen,
+                          closedForDay,
                       },
                     )}
                   >
@@ -167,17 +262,21 @@ export const Footer = async () => {
                         <span className="relative flex size-2.5">
                           <span
                             className={cn(
-                              "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75",
+                              "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
                               {
-                                "bg-red-500": !item.isOpen,
+                                "bg-green-500": openNow,
+                                "bg-amber-500": opensLaterOrClosedNow,
+                                "bg-red-500": closedForDay,
                               },
                             )}
                           />
                           <span
                             className={cn(
-                              "relative inline-flex size-2.5 rounded-full bg-green-500",
+                              "relative inline-flex size-2.5 rounded-full",
                               {
-                                "bg-red-500": !item.isOpen,
+                                "bg-green-500": openNow,
+                                "bg-amber-500": opensLaterOrClosedNow,
+                                "bg-red-500": closedForDay,
                               },
                             )}
                           />
@@ -189,15 +288,16 @@ export const Footer = async () => {
                       className={cn(
                         "text-background/80 mt-1 text-xs font-medium",
                         {
-                          "text-red-400": !item.isOpen && active,
-                          "text-green-500": item.isOpen && active,
+                          "text-green-500": active && openNow,
+                          "text-amber-400": opensLaterOrClosedNow,
+                          "text-red-400": closedForDay,
                         },
                       )}
                     >
-                      {item.isOpen
-                        ? `${formatTimeTo12Hour(item.startTime)} – ${formatTimeTo12Hour(item.endTime)}`
-                        : active
-                          ? "Not available today"
+                      {closedForDay
+                        ? "Not available today"
+                        : item.isOpen
+                          ? `${formatTimeTo12Hour(item.startTime)} – ${formatTimeTo12Hour(item.endTime)}`
                           : "Unavailable"}
                     </div>
                   </div>

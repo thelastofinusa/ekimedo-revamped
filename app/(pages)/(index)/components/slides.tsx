@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { ChevronRightIcon } from "lucide-react";
 
 import { siteConfig } from "@/config/site.config";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/shadcn/button";
 import { Container } from "@/components/shared/container";
 
 export const HeroSlides: React.FC<{ images: string[] }> = ({ images }) => {
@@ -79,7 +79,7 @@ export const HeroSlides: React.FC<{ images: string[] }> = ({ images }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 1 }}
-            className="mt-2 max-w-md font-mono text-[11px] leading-relaxed tracking-wider uppercase sm:text-xs md:mt-0"
+            className="mt-2 max-w-md font-sans text-[11px] leading-relaxed tracking-[0.3em] uppercase sm:text-xs md:mt-0"
           >
             Bridal · Reception · Prom · Special Events
           </motion.p>
@@ -92,7 +92,7 @@ export const HeroSlides: React.FC<{ images: string[] }> = ({ images }) => {
           >
             <div className="flex w-full max-w-xl flex-col items-center justify-center gap-4 sm:gap-6 md:flex-row">
               <Link
-                href="/pre-made-dresses"
+                href="/pre-made"
                 className={buttonVariants({
                   variant: "secondary",
                   size: "xl",
@@ -102,7 +102,7 @@ export const HeroSlides: React.FC<{ images: string[] }> = ({ images }) => {
                 Shop Pre-made Designs
               </Link>
               <Link
-                href="/book-consultation"
+                href="/consultations"
                 className={buttonVariants({
                   variant: "primary",
                   size: "xl",

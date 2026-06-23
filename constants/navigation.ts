@@ -1,3 +1,5 @@
+import { siteConfig } from "@/config/site.config";
+
 type Route = {
   label: string;
   path: string;
@@ -15,7 +17,7 @@ type HeaderRoute =
 export const headerRoutes: HeaderRoute[] = [
   {
     label: "Pre-made Dresses",
-    path: "/pre-made-dresses",
+    path: "/pre-made",
   },
   {
     label: "Inquiry",
@@ -23,7 +25,7 @@ export const headerRoutes: HeaderRoute[] = [
   },
   {
     label: "Book Consultation",
-    path: "/book-consultation",
+    path: "/consultations",
   },
   {
     label: "Pricing",
@@ -45,7 +47,7 @@ export const headerRoutes: HeaderRoute[] = [
         path: "/reviews",
       },
       {
-        label: "Let's Talk",
+        label: "Contact Us",
         path: "/contact-us",
       },
     ],
@@ -67,7 +69,7 @@ export const footerRoutes = [
       ...(discoverRoute?.subroutes ?? []),
       {
         label: "Cancellation Policy",
-        path: "/cancellation-policy",
+        path: "/policies/cancellation",
       },
     ],
   },
@@ -80,8 +82,8 @@ export const footerRoutes = [
         newTab: true,
       },
       {
-        label: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL,
-        path: `mailto:${process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL}`,
+        label: siteConfig.supportEmail,
+        path: `mailto:${siteConfig.supportEmail}`,
         newTab: true,
       },
       {

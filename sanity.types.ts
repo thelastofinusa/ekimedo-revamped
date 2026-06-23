@@ -94,9 +94,6 @@ export type FormField = {
   errMsg?: string;
   group?: string;
   defaultValue?: string;
-  min?: number;
-  max?: number;
-  size?: number;
   icons?: FieldIcons;
   options?: Array<
     {
@@ -123,6 +120,13 @@ export type FormCard = {
   >;
 };
 
+export type ConsultationReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "consultation";
+};
+
 export type SanityImageAssetReference = {
   _ref: string;
   _type: "reference";
@@ -130,28 +134,41 @@ export type SanityImageAssetReference = {
   [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
 };
 
-export type Inquiry = {
+export type Booking = {
   _id: string;
-  _type: "inquiry";
+  _type: "booking";
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  eventType?: "wedding" | "prom" | "reception" | "special-occasion";
-  eventDate?: string;
-  budget?: string;
-  dreamDress?: string;
-  inspirationPhotos?: Array<{
-    asset?: SanityImageAssetReference;
-    media?: unknown;
-    hotspot?: SanityImageHotspot;
-    crop?: SanityImageCrop;
-    _type: "image";
+  consultation?: ConsultationReference;
+  dateTime?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  status?: "pending" | "paid" | "cancelled";
+  paymentMethod?: "stripe" | "paypal";
+  stripeSessionId?: string;
+  paypalOrderId?: string;
+  formFields?: Array<{
+    fieldName?: string;
+    fieldLabel?: string;
+    fieldType?: string;
+    value?: string;
+    files?: Array<{
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+      _key: string;
+    }>;
+    _type: "formFieldAnswer";
     _key: string;
   }>;
-  status?: "new" | "contacted" | "in-progress" | "completed" | "archived";
+  emailSent?: {
+    admin?: boolean;
+    customer?: boolean;
+  };
 };
 
 export type SanityImageCrop = {
@@ -209,6 +226,46 @@ export type Order = {
   paypalOrderId?: string;
   paidAt?: string;
   createdAt?: string;
+  emailSent?: {
+    admin?: boolean;
+    customer?: boolean;
+  };
+};
+
+export type BookingProcess = {
+  _id: string;
+  _type: "bookingProcess";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: string;
+  description?: string;
+  icon?: string;
+  order?: number;
+};
+
+export type Inquiry = {
+  _id: string;
+  _type: "inquiry";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  eventType?: "wedding" | "prom" | "reception" | "special-occasion";
+  eventDate?: string;
+  budget?: string;
+  dreamDress?: string;
+  status?: "pending" | "confirmed";
+  inspirationPhotos?: Array<{
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    _type: "asset";
+    _key: string;
+  }>;
 };
 
 export type SanityFileAssetReference = {
@@ -294,46 +351,6 @@ export type Color = {
   rgb?: RgbaColor;
 };
 
-export type ConsultationReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "consultation";
-};
-
-export type Booking = {
-  _id: string;
-  _type: "booking";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  consultation?: ConsultationReference;
-  dateTime?: string;
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  status?: "pending" | "paid" | "confirmed" | "delivered" | "cancelled";
-  paymentMethod?: "stripe" | "paypal";
-  stripeSessionId?: string;
-  paypalOrderId?: string;
-  formFields?: Array<{
-    fieldName?: string;
-    fieldLabel?: string;
-    fieldType?: string;
-    value?: string;
-    files?: Array<{
-      asset?: SanityImageAssetReference;
-      media?: unknown;
-      hotspot?: SanityImageHotspot;
-      crop?: SanityImageCrop;
-      _type: "image";
-      _key: string;
-    }>;
-    _type: "formFieldAnswer";
-    _key: string;
-  }>;
-};
-
 export type BlockedSlot = {
   _id: string;
   _type: "blockedSlot";
@@ -384,14 +401,7 @@ export type BusinessHours = {
   _updatedAt: string;
   _rev: string;
   hours?: Array<{
-    day?:
-      | "Monday"
-      | "Tuesday"
-      | "Wednesday"
-      | "Thursday"
-      | "Friday"
-      | "Saturday"
-      | "Sunday";
+    day?: string;
     isOpen?: boolean;
     startTime?: string;
     endTime?: string;
@@ -433,9 +443,9 @@ export type Social = {
   icon?: string;
 };
 
-export type Permissions = {
+export type Permission = {
   _id: string;
-  _type: "permissions";
+  _type: "permission";
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
@@ -658,12 +668,15 @@ export type AllSanitySchemaTypes =
   | FieldDescription
   | FormField
   | FormCard
+  | ConsultationReference
   | SanityImageAssetReference
-  | Inquiry
+  | Booking
   | SanityImageCrop
   | SanityImageHotspot
   | ProductReference
   | Order
+  | BookingProcess
+  | Inquiry
   | SanityFileAssetReference
   | CategoryReference
   | ProductColorReference
@@ -671,15 +684,13 @@ export type AllSanitySchemaTypes =
   | Slug
   | ProductColor
   | Color
-  | ConsultationReference
-  | Booking
   | BlockedSlot
   | Consultation
   | BusinessHours
   | PricingTier
   | Faq
   | Social
-  | Permissions
+  | Permission
   | Testimonial
   | Hero
   | CancellationPolicy
@@ -697,10 +708,10 @@ export type AllSanitySchemaTypes =
   | SanityImageAsset
   | Geopoint;
 
-// Source: sanity/queries/blockedSlot.ts
-// Variable: BLOCKED_SLOTS_QUERY
+// Source: sanity/queries/blockedSlot.query.ts
+// Variable: QUERY_BLOCKED_SLOTS
 // Query: *[_type == "blockedSlot" && date == $date && ( !defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) ] {    allDay,    startTime,    duration,    message,    "consultationDuration": consultation->duration  }
-export type BLOCKED_SLOTS_QUERY_RESULT = Array<{
+export type QUERY_BLOCKED_SLOTS_RESULT = Array<{
   allDay: boolean | null;
   startTime: string | null;
   duration: number | null;
@@ -708,44 +719,98 @@ export type BLOCKED_SLOTS_QUERY_RESULT = Array<{
   consultationDuration: number | null;
 }>;
 
-// Source: sanity/queries/blockedSlot.ts
-// Variable: BOOKINGS_FOR_DATE_QUERY
+// Source: sanity/queries/blockedSlot.query.ts
+// Variable: QUERY_BOOKINGS_FOR_DATE
 // Query: *[_type == "booking" && consultation._ref == $consultationId && dateTime >= $start && dateTime < $end] {    dateTime  }
-export type BOOKINGS_FOR_DATE_QUERY_RESULT = Array<{
+export type QUERY_BOOKINGS_FOR_DATE_RESULT = Array<{
   dateTime: string | null;
 }>;
 
-// Source: sanity/queries/cancellationPolicy.ts
-// Variable: CANCELLATION_POLICY_QUERY
+// Source: sanity/queries/booking.query.ts
+// Variable: QUERY_BOOKING_BY_ID
+// Query: *[_type == "booking" && _id == $id][0] {    _id,    consultation->{      title    },    dateTime,    customerName,    customerEmail,    customerPhone,    paymentMethod,    status,    formFields[] {      fieldLabel,      fieldType,      fieldName,      value,      files[] {        asset->{          url        }      }    }  }
+export type QUERY_BOOKING_BY_ID_RESULT = {
+  _id: string;
+  consultation: {
+    title: string | null;
+  } | null;
+  dateTime: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  paymentMethod: "paypal" | "stripe" | null;
+  status: "cancelled" | "paid" | "pending" | null;
+  formFields: Array<{
+    fieldLabel: string | null;
+    fieldType: string | null;
+    fieldName: string | null;
+    value: string | null;
+    files: Array<{
+      asset: {
+        url: string | null;
+      } | null;
+    }> | null;
+  }> | null;
+} | null;
+
+// Source: sanity/queries/booking.query.ts
+// Variable: QUERY_BOOKING_BY_STRIPE_SESSION_ID
+// Query: *[_type == "booking" && stripeSessionId == $sessionId][0] {    _id,    consultation->{      title    },    dateTime,    customerName,    customerEmail,    customerPhone,    paymentMethod,    status,    formFields[] {      fieldLabel,      fieldType,      fieldName,      value,      files[] {        asset->{          url        }      }    }  }
+export type QUERY_BOOKING_BY_STRIPE_SESSION_ID_RESULT = {
+  _id: string;
+  consultation: {
+    title: string | null;
+  } | null;
+  dateTime: string | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  paymentMethod: "paypal" | "stripe" | null;
+  status: "cancelled" | "paid" | "pending" | null;
+  formFields: Array<{
+    fieldLabel: string | null;
+    fieldType: string | null;
+    fieldName: string | null;
+    value: string | null;
+    files: Array<{
+      asset: {
+        url: string | null;
+      } | null;
+    }> | null;
+  }> | null;
+} | null;
+
+// Source: sanity/queries/cancellationPolicy.query.ts
+// Variable: QUERY_CANCELLATION_POLICY
 // Query: *[_type == "cancellationPolicy"]{        _id,        title,        description,        icon,    }
-export type CANCELLATION_POLICY_QUERY_RESULT = Array<{
+export type QUERY_CANCELLATION_POLICY_RESULT = Array<{
   _id: string;
   title: string | null;
   description: string | null;
   icon: string | null;
 }>;
 
-// Source: sanity/queries/category.ts
-// Variable: CATEGORIES_QUERY
+// Source: sanity/queries/category.query.ts
+// Variable: QUERY_CATEGORIES
 // Query: *[_type == "category"] | order(_createdAt desc) {        _id,        name,        "slug": slug.current    }
-export type CATEGORIES_QUERY_RESULT = Array<{
+export type QUERY_CATEGORIES_RESULT = Array<{
   _id: string;
   name: string | null;
   slug: string | null;
 }>;
 
 // Source: sanity/queries/color.ts
-// Variable: PRODUCT_COLOR_QUERY
+// Variable: QUERY_PRODUCT_COLOR
 // Query: *[_type == "productColor"]{  name,  "hex": value.hex}
-export type PRODUCT_COLOR_QUERY_RESULT = Array<{
+export type QUERY_PRODUCT_COLOR_RESULT = Array<{
   name: string | null;
   hex: string | null;
 }>;
 
-// Source: sanity/queries/consultation.ts
-// Variable: CONSULTATION_QUERY
-// Query: *[  _type == "consultation" &&  ($onPMPage == null || onPMPage == $onPMPage)] | order(order asc, _createdAt asc) {  _id,  title,  "slug": slug.current,  description,  duration,  price,  dresses,  order,  onPMPage,  "image": image.asset->url,  includes[],  formCards[] {    title,    info,    description,    fields[] {      name,      type,      label,      placeholder,      description {        value,        path,        newTab      },      required,      errMsg,      group,      defaultValue,      min,      max,      size,      icons {        start {          icon,          value        },        end {          icon,          value        }      },      sizes[],      options[] {        id,        label,        description,        interests[] {          id,          label,          description        }      },      items[] {        id,        title,        description,        range {          from,          to        }      }    }  }}
-export type CONSULTATION_QUERY_RESULT = Array<{
+// Source: sanity/queries/consultation.query.ts
+// Variable: QUERY_CONSULTATIONS
+// Query: *[  _type == "consultation" &&  ($onPMPage == null || onPMPage == $onPMPage)] | order(order asc, _createdAt asc) {  _id,  title,  "slug": slug.current,  description,  duration,  price,  dresses,  order,  onPMPage,  "image": image.asset->url,  includes[],  formCards[] {    title,    info,    description,    fields[] {      name,      type,      label,      placeholder,      description {        value,        path,        newTab      },      required,      errMsg,      group,      defaultValue,      icons {        start {          icon,          value        },        end {          icon,          value        }      },      sizes[],      options[] {        id,        label,        description,        interests[] {          id,          label,          description        }      },      items[] {        id,        title,        description,        range {          from,          to        }      }    }  }}
+export type QUERY_CONSULTATIONS_RESULT = Array<{
   _id: string;
   title: string | null;
   slug: string | null;
@@ -788,9 +853,6 @@ export type CONSULTATION_QUERY_RESULT = Array<{
       errMsg: string | null;
       group: string | null;
       defaultValue: string | null;
-      min: number | null;
-      max: number | null;
-      size: number | null;
       icons: {
         start: {
           icon: string | null;
@@ -825,10 +887,10 @@ export type CONSULTATION_QUERY_RESULT = Array<{
   }> | null;
 }>;
 
-// Source: sanity/queries/consultation.ts
-// Variable: CONSULTATION_BY_SLUG_QUERY
-// Query: *[  _type == "consultation" &&  slug.current == $slug][0] {  _id,  title,  "slug": slug.current,  description,  duration,  price,  dresses,  order,  onPMPage,  "image": image.asset->url,  includes[],  formCards[] {    title,    info,    description,    fields[] {      name,      type,      label,      placeholder,      description {        value,        path,        newTab      },      required,      errMsg,      group,      defaultValue,      min,      max,      size,      icons {        start {          icon,          value        },        end {          icon,          value        }      },      sizes[],      options[] {        id,        label,        description,        interests[] {          id,          label,          description        }      },      items[] {        id,        title,        description,        range {          from,          to        }      }    }  }}
-export type CONSULTATION_BY_SLUG_QUERY_RESULT = {
+// Source: sanity/queries/consultation.query.ts
+// Variable: QUERY_CONSULTATION_BY_SLUG
+// Query: *[  _type == "consultation" &&  slug.current == $slug][0] {  _id,  title,  "slug": slug.current,  description,  duration,  price,  dresses,  order,  onPMPage,  "image": image.asset->url,  includes[],  formCards[] {    title,    info,    description,    fields[] {      name,      type,      label,      placeholder,      description {        value,        path,        newTab      },      required,      errMsg,      group,      defaultValue,      icons {        start {          icon,          value        },        end {          icon,          value        }      },      sizes[],      options[] {        id,        label,        description,        interests[] {          id,          label,          description        }      },      items[] {        id,        title,        description,        range {          from,          to        }      }    }  }}
+export type QUERY_CONSULTATION_BY_SLUG_RESULT = {
   _id: string;
   title: string | null;
   slug: string | null;
@@ -871,9 +933,6 @@ export type CONSULTATION_BY_SLUG_QUERY_RESULT = {
       errMsg: string | null;
       group: string | null;
       defaultValue: string | null;
-      min: number | null;
-      max: number | null;
-      size: number | null;
       icons: {
         start: {
           icon: string | null;
@@ -908,19 +967,19 @@ export type CONSULTATION_BY_SLUG_QUERY_RESULT = {
   }> | null;
 } | null;
 
-// Source: sanity/queries/faq.ts
-// Variable: FAQ_QUERY
+// Source: sanity/queries/faq.query.ts
+// Variable: QUERY_FAQ
 // Query: *[_type == "faq"] | order(_createdAt asc) {_id,  question,  answer}
-export type FAQ_QUERY_RESULT = Array<{
+export type QUERY_FAQ_RESULT = Array<{
   _id: string;
   question: string | null;
   answer: string | null;
 }>;
 
-// Source: sanity/queries/gallery.ts
-// Variable: GALLERY_QUERY
+// Source: sanity/queries/gallery.query.ts
+// Variable: QUERY_GALLERY
 // Query: *[_type == "gallery"] | order(_createdAt asc){  _id,  "image": image.asset->url,  "width": image.asset->metadata.dimensions.width,  "height": image.asset->metadata.dimensions.height,  category->{    name,    "slug": slug.current  }}
-export type GALLERY_QUERY_RESULT = Array<{
+export type QUERY_GALLERY_RESULT = Array<{
   _id: string;
   image: string | null;
   width: number | null;
@@ -931,10 +990,10 @@ export type GALLERY_QUERY_RESULT = Array<{
   } | null;
 }>;
 
-// Source: sanity/queries/gallery.ts
-// Variable: FEATURED_GALLERY_QUERY
+// Source: sanity/queries/gallery.query.ts
+// Variable: QUERY_FEATURED_GALLERY
 // Query: *[_type == "gallery" && featured == true  && (!defined($category) || category->slug.current == $category)]| order(_createdAt asc)[$start...$end]{  _id,  "image": image.asset->url,  "width": image.asset->metadata.dimensions.width,  "height": image.asset->metadata.dimensions.height,  category->{    name,    "slug": slug.current  }}
-export type FEATURED_GALLERY_QUERY_RESULT = Array<{
+export type QUERY_FEATURED_GALLERY_RESULT = Array<{
   _id: string;
   image: string | null;
   width: number | null;
@@ -945,39 +1004,60 @@ export type FEATURED_GALLERY_QUERY_RESULT = Array<{
   } | null;
 }>;
 
-// Source: sanity/queries/hero.ts
-// Variable: HERO_QUERY
+// Source: sanity/queries/hero.query.ts
+// Variable: QUERY_HERO_IMAGES
 // Query: *[_type == "hero"] | order(_createdAt desc) {        _id,        "image": image.asset->url,        alt    }
-export type HERO_QUERY_RESULT = Array<{
+export type QUERY_HERO_IMAGES_RESULT = Array<{
   _id: string;
   image: string | null;
   alt: string | null;
 }>;
 
-// Source: sanity/queries/hours.ts
-// Variable: BUSINESS_HOUR_QUERY
-// Query: *[_type == "businessHours"]{  hours[]}[0]
-export type BUSINESS_HOUR_QUERY_RESULT = {
-  hours: Array<{
-    day?:
-      | "Friday"
-      | "Monday"
-      | "Saturday"
-      | "Sunday"
-      | "Thursday"
-      | "Tuesday"
-      | "Wednesday";
-    isOpen?: boolean;
-    startTime?: string;
-    endTime?: string;
+// Source: sanity/queries/hour.query.ts
+// Variable: QUERY_BUSINESS_HOURS
+// Query: *[_id == "businessHours"][0]{    hours[]{      _key,      day,      isOpen,      startTime,      endTime    }  }
+export type QUERY_BUSINESS_HOURS_RESULT =
+  | {
+      hours: null;
+    }
+  | {
+      hours: Array<{
+        _key: string;
+        day: string | null;
+        isOpen: boolean | null;
+        startTime: string | null;
+        endTime: string | null;
+      }> | null;
+    }
+  | null;
+
+// Source: sanity/queries/inquiry.query.ts
+// Variable: QUERY_INQUIRY_BY_ID
+// Query: *[_type == "inquiry" && _id == $id][0] {    _id,    _createdAt,    fullName,    email,    phone,    eventType,    eventDate,    budget,    dreamDress,    status,    inspirationPhotos[]{      _key,      asset->{        _id,        url      }    }  }
+export type QUERY_INQUIRY_BY_ID_RESULT = {
+  _id: string;
+  _createdAt: string;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  eventType: "prom" | "reception" | "special-occasion" | "wedding" | null;
+  eventDate: string | null;
+  budget: string | null;
+  dreamDress: string | null;
+  status: "confirmed" | "pending" | null;
+  inspirationPhotos: Array<{
     _key: string;
+    asset: {
+      _id: string;
+      url: string | null;
+    } | null;
   }> | null;
 } | null;
 
-// Source: sanity/queries/orders.ts
-// Variable: ORDERS_BY_USER_QUERY
-// Query: *[  _type == "order"  && clerkUserId == $clerkUserId] | order(createdAt desc) {  _id,  orderNumber,  total,  status,  createdAt,  "itemCount": count(items),  "itemNames": items[].product->name,  "itemImages": items[].product->images[0].asset->url}
-export type ORDERS_BY_USER_QUERY_RESULT = Array<{
+// Source: sanity/queries/orders.query.ts
+// Variable: QUERY_ORDERS_BY_USER
+// Query: *[  _type == "order"  && clerkUserId == $clerkUserId] | order(createdAt desc) {  _id,  orderNumber,  total,  status,  createdAt,  "itemCount": count(items),  "itemNames": items[].product->name,  "itemImages": items[].product->snapshots[0]{    _type,    "url": asset->url  }}
+export type QUERY_ORDERS_BY_USER_RESULT = Array<{
   _id: string;
   orderNumber: string | null;
   total: number | null;
@@ -985,13 +1065,23 @@ export type ORDERS_BY_USER_QUERY_RESULT = Array<{
   createdAt: string | null;
   itemCount: number | null;
   itemNames: Array<string | null> | null;
-  itemImages: Array<null> | null;
+  itemImages: Array<
+    | {
+        _type: "file";
+        url: string | null;
+      }
+    | {
+        _type: "image";
+        url: string | null;
+      }
+    | null
+  > | null;
 }>;
 
-// Source: sanity/queries/orders.ts
-// Variable: ORDER_BY_ID_QUERY
-// Query: *[  _type == "order"  && _id == $id][0] {  _id,  orderNumber,  clerkUserId,  email,  items[]{    _key,    quantity,    priceAtPurchase,    product->{      _id,      name,      "slug": slug.current,      "image": images[0].asset->url    }  },  total,  status,  address{    name,    line1,    line2,    city,    postcode,    country  },  stripePaymentId,  createdAt}
-export type ORDER_BY_ID_QUERY_RESULT = {
+// Source: sanity/queries/orders.query.ts
+// Variable: QUERY_ORDER_BY_ID
+// Query: *[  _type == "order"  && _id == $id][0] {  _id,  orderNumber,  clerkUserId,  email,  items[]{    _key,    quantity,    priceAtPurchase,    product->{      _id,      name,      "slug": slug.current,      "snapshots": snapshots[0..0]{        _type,        "url": asset->url      }    }  },  total,  status,  address{    name,    line1,    line2,    city,    postcode,    country  },  paymentMethod,  paymentStatus,  stripePaymentId,  createdAt}
+export type QUERY_ORDER_BY_ID_RESULT = {
   _id: string;
   orderNumber: string | null;
   clerkUserId: string | null;
@@ -1004,7 +1094,16 @@ export type ORDER_BY_ID_QUERY_RESULT = {
       _id: string;
       name: string | null;
       slug: string | null;
-      image: null;
+      snapshots: Array<
+        | {
+            _type: "file";
+            url: string | null;
+          }
+        | {
+            _type: "image";
+            url: string | null;
+          }
+      > | null;
     } | null;
   }> | null;
   total: number | null;
@@ -1017,14 +1116,16 @@ export type ORDER_BY_ID_QUERY_RESULT = {
     postcode: string | null;
     country: string | null;
   } | null;
+  paymentMethod: "paypal" | "stripe" | null;
+  paymentStatus: "failed" | "paid" | "pending" | "refunded" | null;
   stripePaymentId: string | null;
   createdAt: string | null;
 } | null;
 
-// Source: sanity/queries/orders.ts
-// Variable: RECENT_ORDERS_QUERY
+// Source: sanity/queries/orders.query.ts
+// Variable: QUERY_RECENT_ORDERS
 // Query: *[  _type == "order"] | order(createdAt desc) [0...$limit] {  _id,  orderNumber,  email,  total,  status,  createdAt}
-export type RECENT_ORDERS_QUERY_RESULT = Array<{
+export type QUERY_RECENT_ORDERS_RESULT = Array<{
   _id: string;
   orderNumber: string | null;
   email: string | null;
@@ -1033,26 +1134,36 @@ export type RECENT_ORDERS_QUERY_RESULT = Array<{
   createdAt: string | null;
 }>;
 
-// Source: sanity/queries/orders.ts
-// Variable: ORDER_BY_STRIPE_PAYMENT_ID_QUERY
-// Query: *[  _type == "order"  && stripePaymentId == $stripePaymentId][0]{ _id }
-export type ORDER_BY_STRIPE_PAYMENT_ID_QUERY_RESULT = {
+// Source: sanity/queries/orders.query.ts
+// Variable: QUERY_ORDER_BY_STRIPE_PAYMENT_ID
+// Query: *[  _type == "order"  && stripePaymentId == $stripePaymentId][0]{  _id,  orderNumber,  emailSent {    admin,    customer  }}
+export type QUERY_ORDER_BY_STRIPE_PAYMENT_ID_RESULT = {
   _id: string;
+  orderNumber: string | null;
+  emailSent: {
+    admin: boolean | null;
+    customer: boolean | null;
+  } | null;
 } | null;
 
-// Source: sanity/queries/orders.ts
-// Variable: ORDER_BY_STRIPE_SESSION_ID_QUERY
-// Query: *[  _type == "order"  && stripeSessionId == $sessionId][0]{ _id }
-export type ORDER_BY_STRIPE_SESSION_ID_QUERY_RESULT = {
+// Source: sanity/queries/orders.query.ts
+// Variable: QUERY_ORDER_BY_STRIPE_SESSION_ID
+// Query: *[  _type == "order"  && stripeSessionId == $sessionId][0] {  _id,  orderNumber,  emailSent {    admin,    customer  }}
+export type QUERY_ORDER_BY_STRIPE_SESSION_ID_RESULT = {
   _id: string;
+  orderNumber: string | null;
+  emailSent: {
+    admin: boolean | null;
+    customer: boolean | null;
+  } | null;
 } | null;
 
-// Source: sanity/queries/permission.ts
-// Variable: REVIEW_PERMISSION_QUERY
-// Query: *[_type == "permissions" && lower(customerEmail) == lower($email)][0]
-export type REVIEW_PERMISSION_QUERY_RESULT = {
+// Source: sanity/queries/permission.query.ts
+// Variable: QUERY_REVIEW_PERMISSION
+// Query: *[_type == "permission" && lower(customerEmail) == lower($email)][0]
+export type QUERY_REVIEW_PERMISSION_RESULT = {
   _id: string;
-  _type: "permissions";
+  _type: "permission";
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
@@ -1060,10 +1171,10 @@ export type REVIEW_PERMISSION_QUERY_RESULT = {
   customerEmail?: string;
 } | null;
 
-// Source: sanity/queries/pricing.ts
-// Variable: PRICING_TIERS_QUERY
+// Source: sanity/queries/pricing.query.ts
+// Variable: QUERY_PRICING_TIERS
 // Query: *[_type == "pricingTier"] | order(order asc, _createdAt asc) {  _id,  name,  price,  description,  features}
-export type PRICING_TIERS_QUERY_RESULT = Array<{
+export type QUERY_PRICING_TIERS_RESULT = Array<{
   _id: string;
   name: string | null;
   price: number | null;
@@ -1071,10 +1182,21 @@ export type PRICING_TIERS_QUERY_RESULT = Array<{
   features: Array<string> | null;
 }>;
 
-// Source: sanity/queries/product.ts
-// Variable: PRODUCT_QUERY
+// Source: sanity/queries/process.query.ts
+// Variable: QUERY_BOOKING_PROCESS
+// Query: *[_type == "bookingProcess"] | order(order asc, _createdAt asc) {        _id,        title,        description,        icon,        order,    }
+export type QUERY_BOOKING_PROCESS_RESULT = Array<{
+  _id: string;
+  title: string | null;
+  description: string | null;
+  icon: string | null;
+  order: number | null;
+}>;
+
+// Source: sanity/queries/product.query.ts
+// Variable: QUERY_PRODUCT
 // Query: *[_type == "product"] | order(_createdAt desc) {    _id,    name,    "slug": slug.current,    price,    colors[]->{name, "value": value.hex},    description,    delivery,    "snapshots": snapshots[]{      _type,      "url": asset->url    },    sizes,    stock,    category -> {        _id,        name,        "slug": slug.current    },}
-export type PRODUCT_QUERY_RESULT = Array<{
+export type QUERY_PRODUCT_RESULT = Array<{
   _id: string;
   name: string | null;
   slug: string | null;
@@ -1104,10 +1226,10 @@ export type PRODUCT_QUERY_RESULT = Array<{
   } | null;
 }>;
 
-// Source: sanity/queries/product.ts
-// Variable: PRODUCT_BY_SLUG_QUERY
+// Source: sanity/queries/product.query.ts
+// Variable: QUERY_PRODUCT_BY_SLUG
 // Query: *[_type == "product" && slug.current == $slug] | order(_createdAt desc)[0] {    _id,    name,    "slug": slug.current,    price,    colors[]->{name, "value": value.hex},    description,    "snapshots": snapshots[]{      _type,      "url": asset->url    },    sizes,    stock,    delivery,    category -> {        _id,        name,        "slug": slug.current    },}
-export type PRODUCT_BY_SLUG_QUERY_RESULT = {
+export type QUERY_PRODUCT_BY_SLUG_RESULT = {
   _id: string;
   name: string | null;
   slug: string | null;
@@ -1137,10 +1259,10 @@ export type PRODUCT_BY_SLUG_QUERY_RESULT = {
   } | null;
 } | null;
 
-// Source: sanity/queries/product.ts
-// Variable: PRODUCT_BY_IDS_QUERY
+// Source: sanity/queries/product.query.ts
+// Variable: QUERY_PRODUCT_BY_IDS
 // Query: *[_type == "product" && _id in $ids] | order(_createdAt desc) {    _id,    name,    "slug": slug.current,    price,    colors[]->{name, "value": value.hex},    description,    "snapshots": snapshots[]{      _type,      "url": asset->url    },    sizes,    stock,    delivery,    category -> {        _id,        name,        "slug": slug.current    },}
-export type PRODUCT_BY_IDS_QUERY_RESULT = Array<{
+export type QUERY_PRODUCT_BY_IDS_RESULT = Array<{
   _id: string;
   name: string | null;
   slug: string | null;
@@ -1170,10 +1292,10 @@ export type PRODUCT_BY_IDS_QUERY_RESULT = Array<{
   } | null;
 }>;
 
-// Source: sanity/queries/review.ts
-// Variable: REVIEW_QUERY
+// Source: sanity/queries/review.query.ts
+// Variable: QUERY_REVIEWS
 // Query: *[_type == "testimonial" && status == "approved"] | order(date desc) {    _id,    "avatar": avatar.asset->url,    service,    date,    name,    rating,    review,    "workAssets": workAssets[].asset->url}
-export type REVIEW_QUERY_RESULT = Array<{
+export type QUERY_REVIEWS_RESULT = Array<{
   _id: string;
   avatar: string | null;
   service: string | null;
@@ -1184,10 +1306,10 @@ export type REVIEW_QUERY_RESULT = Array<{
   workAssets: Array<string | null> | null;
 }>;
 
-// Source: sanity/queries/socials.ts
-// Variable: SOCIAL_QUERY
+// Source: sanity/queries/social.query.ts
+// Variable: QUERY_SOCIAL_HANDLES
 // Query: *[_type == "social"] | order(_createdAt desc) {        _id,        name,        url,        icon    }
-export type SOCIAL_QUERY_RESULT = Array<{
+export type QUERY_SOCIAL_HANDLES_RESULT = Array<{
   _id: string;
   name: string | null;
   url: string | null;
@@ -1198,29 +1320,33 @@ export type SOCIAL_QUERY_RESULT = Array<{
 import "@sanity/client";
 declare module "@sanity/client" {
   interface SanityQueries {
-    '\n  *[_type == "blockedSlot" && date == $date && ( !defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) ] {\n    allDay,\n    startTime,\n    duration,\n    message,\n    "consultationDuration": consultation->duration\n  }\n': BLOCKED_SLOTS_QUERY_RESULT;
-    '\n  *[_type == "booking" && consultation._ref == $consultationId && dateTime >= $start && dateTime < $end] {\n    dateTime\n  }\n': BOOKINGS_FOR_DATE_QUERY_RESULT;
-    '\n    *[_type == "cancellationPolicy"]{\n        _id,\n        title,\n        description,\n        icon,\n    }\n': CANCELLATION_POLICY_QUERY_RESULT;
-    '\n    *[_type == "category"] | order(_createdAt desc) {\n        _id,\n        name,\n        "slug": slug.current\n    }\n': CATEGORIES_QUERY_RESULT;
-    '\n*[_type == "productColor"]{\n  name,\n  "hex": value.hex\n}\n': PRODUCT_COLOR_QUERY_RESULT;
-    '\n*[\n  _type == "consultation" &&\n  ($onPMPage == null || onPMPage == $onPMPage)\n] | order(order asc, _createdAt asc) {\n  _id,\n  title,\n  "slug": slug.current,\n  description,\n  duration,\n  price,\n  dresses,\n  order,\n  onPMPage,\n\n  "image": image.asset->url,\n\n  includes[],\n\n  formCards[] {\n    title,\n    info,\n    description,\n\n    fields[] {\n      name,\n      type,\n      label,\n      placeholder,\n\n      description {\n        value,\n        path,\n        newTab\n      },\n\n      required,\n      errMsg,\n      group,\n      defaultValue,\n      min,\n      max,\n      size,\n\n      icons {\n        start {\n          icon,\n          value\n        },\n        end {\n          icon,\n          value\n        }\n      },\n\n      sizes[],\n\n      options[] {\n        id,\n        label,\n        description,\n\n        interests[] {\n          id,\n          label,\n          description\n        }\n      },\n\n      items[] {\n        id,\n        title,\n        description,\n\n        range {\n          from,\n          to\n        }\n      }\n    }\n  }\n}\n': CONSULTATION_QUERY_RESULT;
-    '\n*[\n  _type == "consultation" &&\n  slug.current == $slug\n][0] {\n  _id,\n  title,\n  "slug": slug.current,\n  description,\n  duration,\n  price,\n  dresses,\n  order,\n  onPMPage,\n\n  "image": image.asset->url,\n\n  includes[],\n\n  formCards[] {\n    title,\n    info,\n    description,\n\n    fields[] {\n      name,\n      type,\n      label,\n      placeholder,\n\n      description {\n        value,\n        path,\n        newTab\n      },\n\n      required,\n      errMsg,\n      group,\n      defaultValue,\n      min,\n      max,\n      size,\n\n      icons {\n        start {\n          icon,\n          value\n        },\n        end {\n          icon,\n          value\n        }\n      },\n\n      sizes[],\n\n      options[] {\n        id,\n        label,\n        description,\n\n        interests[] {\n          id,\n          label,\n          description\n        }\n      },\n\n      items[] {\n        id,\n        title,\n        description,\n\n        range {\n          from,\n          to\n        }\n      }\n    }\n  }\n}\n': CONSULTATION_BY_SLUG_QUERY_RESULT;
-    '\n*[_type == "faq"] | order(_createdAt asc) {\n_id,\n  question,\n  answer\n}\n': FAQ_QUERY_RESULT;
-    '\n*[_type == "gallery"] | order(_createdAt asc){\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': GALLERY_QUERY_RESULT;
-    '\n*[_type == "gallery"\n && featured == true\n  && (!defined($category) || category->slug.current == $category)\n]\n| order(_createdAt asc)\n[$start...$end]{\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}\n': FEATURED_GALLERY_QUERY_RESULT;
-    '\n    *[_type == "hero"] | order(_createdAt desc) {\n        _id,\n        "image": image.asset->url,\n        alt\n    }\n': HERO_QUERY_RESULT;
-    '\n    *[_type == "businessHours"]{\n  hours[]\n}[0]\n': BUSINESS_HOUR_QUERY_RESULT;
-    '*[\n  _type == "order"\n  && clerkUserId == $clerkUserId\n] | order(createdAt desc) {\n  _id,\n  orderNumber,\n  total,\n  status,\n  createdAt,\n  "itemCount": count(items),\n  "itemNames": items[].product->name,\n  "itemImages": items[].product->images[0].asset->url\n}': ORDERS_BY_USER_QUERY_RESULT;
-    '*[\n  _type == "order"\n  && _id == $id\n][0] {\n  _id,\n  orderNumber,\n  clerkUserId,\n  email,\n  items[]{\n    _key,\n    quantity,\n    priceAtPurchase,\n    product->{\n      _id,\n      name,\n      "slug": slug.current,\n      "image": images[0].asset->url\n    }\n  },\n  total,\n  status,\n  address{\n    name,\n    line1,\n    line2,\n    city,\n    postcode,\n    country\n  },\n  stripePaymentId,\n  createdAt\n}': ORDER_BY_ID_QUERY_RESULT;
-    '*[\n  _type == "order"\n] | order(createdAt desc) [0...$limit] {\n  _id,\n  orderNumber,\n  email,\n  total,\n  status,\n  createdAt\n}': RECENT_ORDERS_QUERY_RESULT;
-    '*[\n  _type == "order"\n  && stripePaymentId == $stripePaymentId\n][0]{ _id }': ORDER_BY_STRIPE_PAYMENT_ID_QUERY_RESULT;
-    '*[\n  _type == "order"\n  && stripeSessionId == $sessionId\n][0]{ _id }': ORDER_BY_STRIPE_SESSION_ID_QUERY_RESULT;
-    '*[_type == "permissions" && lower(customerEmail) == lower($email)][0]': REVIEW_PERMISSION_QUERY_RESULT;
-    '\n*[_type == "pricingTier"] | order(order asc, _createdAt asc) {\n  _id,\n  name,\n  price,\n  description,\n  features\n}\n': PRICING_TIERS_QUERY_RESULT;
-    '\n*[_type == "product"] | order(_createdAt desc) {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    delivery,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': PRODUCT_QUERY_RESULT;
-    '\n*[_type == "product" && slug.current == $slug] | order(_createdAt desc)[0] {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    delivery,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': PRODUCT_BY_SLUG_QUERY_RESULT;
-    '\n*[_type == "product" && _id in $ids] | order(_createdAt desc) {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    delivery,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': PRODUCT_BY_IDS_QUERY_RESULT;
-    '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': REVIEW_QUERY_RESULT;
-    '\n    *[_type == "social"] | order(_createdAt desc) {\n        _id,\n        name,\n        url,\n        icon\n    }\n': SOCIAL_QUERY_RESULT;
+    '\n  *[_type == "blockedSlot" && date == $date && ( !defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) ] {\n    allDay,\n    startTime,\n    duration,\n    message,\n    "consultationDuration": consultation->duration\n  }\n': QUERY_BLOCKED_SLOTS_RESULT;
+    '\n  *[_type == "booking" && consultation._ref == $consultationId && dateTime >= $start && dateTime < $end] {\n    dateTime\n  }\n': QUERY_BOOKINGS_FOR_DATE_RESULT;
+    '\n  *[_type == "booking" && _id == $id][0] {\n    _id,\n    consultation->{\n      title\n    },\n    dateTime,\n    customerName,\n    customerEmail,\n    customerPhone,\n    paymentMethod,\n    status,\n    formFields[] {\n      fieldLabel,\n      fieldType,\n      fieldName,\n      value,\n      files[] {\n        asset->{\n          url\n        }\n      }\n    }\n  }\n': QUERY_BOOKING_BY_ID_RESULT;
+    '\n  *[_type == "booking" && stripeSessionId == $sessionId][0] {\n    _id,\n    consultation->{\n      title\n    },\n    dateTime,\n    customerName,\n    customerEmail,\n    customerPhone,\n    paymentMethod,\n    status,\n    formFields[] {\n      fieldLabel,\n      fieldType,\n      fieldName,\n      value,\n      files[] {\n        asset->{\n          url\n        }\n      }\n    }\n  }\n': QUERY_BOOKING_BY_STRIPE_SESSION_ID_RESULT;
+    '\n    *[_type == "cancellationPolicy"]{\n        _id,\n        title,\n        description,\n        icon,\n    }\n': QUERY_CANCELLATION_POLICY_RESULT;
+    '\n    *[_type == "category"] | order(_createdAt desc) {\n        _id,\n        name,\n        "slug": slug.current\n    }\n': QUERY_CATEGORIES_RESULT;
+    '\n*[_type == "productColor"]{\n  name,\n  "hex": value.hex\n}\n': QUERY_PRODUCT_COLOR_RESULT;
+    '\n*[\n  _type == "consultation" &&\n  ($onPMPage == null || onPMPage == $onPMPage)\n] | order(order asc, _createdAt asc) {\n  _id,\n  title,\n  "slug": slug.current,\n  description,\n  duration,\n  price,\n  dresses,\n  order,\n  onPMPage,\n\n  "image": image.asset->url,\n\n  includes[],\n\n  formCards[] {\n    title,\n    info,\n    description,\n\n    fields[] {\n      name,\n      type,\n      label,\n      placeholder,\n\n      description {\n        value,\n        path,\n        newTab\n      },\n\n      required,\n      errMsg,\n      group,\n      defaultValue,\n\n      icons {\n        start {\n          icon,\n          value\n        },\n        end {\n          icon,\n          value\n        }\n      },\n\n      sizes[],\n\n      options[] {\n        id,\n        label,\n        description,\n\n        interests[] {\n          id,\n          label,\n          description\n        }\n      },\n\n      items[] {\n        id,\n        title,\n        description,\n\n        range {\n          from,\n          to\n        }\n      }\n    }\n  }\n}\n': QUERY_CONSULTATIONS_RESULT;
+    '\n*[\n  _type == "consultation" &&\n  slug.current == $slug\n][0] {\n  _id,\n  title,\n  "slug": slug.current,\n  description,\n  duration,\n  price,\n  dresses,\n  order,\n  onPMPage,\n\n  "image": image.asset->url,\n\n  includes[],\n\n  formCards[] {\n    title,\n    info,\n    description,\n\n    fields[] {\n      name,\n      type,\n      label,\n      placeholder,\n\n      description {\n        value,\n        path,\n        newTab\n      },\n\n      required,\n      errMsg,\n      group,\n      defaultValue,\n\n      icons {\n        start {\n          icon,\n          value\n        },\n        end {\n          icon,\n          value\n        }\n      },\n\n      sizes[],\n\n      options[] {\n        id,\n        label,\n        description,\n\n        interests[] {\n          id,\n          label,\n          description\n        }\n      },\n\n      items[] {\n        id,\n        title,\n        description,\n\n        range {\n          from,\n          to\n        }\n      }\n    }\n  }\n}\n': QUERY_CONSULTATION_BY_SLUG_RESULT;
+    '\n*[_type == "faq"] | order(_createdAt asc) {\n_id,\n  question,\n  answer\n}': QUERY_FAQ_RESULT;
+    '\n*[_type == "gallery"] | order(_createdAt asc){\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}': QUERY_GALLERY_RESULT;
+    '\n*[_type == "gallery"\n && featured == true\n  && (!defined($category) || category->slug.current == $category)\n]\n| order(_createdAt asc)\n[$start...$end]{\n  _id,\n  "image": image.asset->url,\n  "width": image.asset->metadata.dimensions.width,\n  "height": image.asset->metadata.dimensions.height,\n  category->{\n    name,\n    "slug": slug.current\n  }\n}': QUERY_FEATURED_GALLERY_RESULT;
+    '\n    *[_type == "hero"] | order(_createdAt desc) {\n        _id,\n        "image": image.asset->url,\n        alt\n    }\n': QUERY_HERO_IMAGES_RESULT;
+    '\n  *[_id == "businessHours"][0]{\n    hours[]{\n      _key,\n      day,\n      isOpen,\n      startTime,\n      endTime\n    }\n  }\n': QUERY_BUSINESS_HOURS_RESULT;
+    '\n  *[_type == "inquiry" && _id == $id][0] {\n    _id,\n    _createdAt,\n    fullName,\n    email,\n    phone,\n    eventType,\n    eventDate,\n    budget,\n    dreamDress,\n    status,\n    inspirationPhotos[]{\n      _key,\n      asset->{\n        _id,\n        url\n      }\n    }\n  }\n': QUERY_INQUIRY_BY_ID_RESULT;
+    '*[\n  _type == "order"\n  && clerkUserId == $clerkUserId\n] | order(createdAt desc) {\n  _id,\n  orderNumber,\n  total,\n  status,\n  createdAt,\n  "itemCount": count(items),\n  "itemNames": items[].product->name,\n  "itemImages": items[].product->snapshots[0]{\n    _type,\n    "url": asset->url\n  }\n}': QUERY_ORDERS_BY_USER_RESULT;
+    '*[\n  _type == "order"\n  && _id == $id\n][0] {\n  _id,\n  orderNumber,\n  clerkUserId,\n  email,\n  items[]{\n    _key,\n    quantity,\n    priceAtPurchase,\n    product->{\n      _id,\n      name,\n      "slug": slug.current,\n      "snapshots": snapshots[0..0]{\n        _type,\n        "url": asset->url\n      }\n    }\n  },\n  total,\n  status,\n  address{\n    name,\n    line1,\n    line2,\n    city,\n    postcode,\n    country\n  },\n  paymentMethod,\n  paymentStatus,\n  stripePaymentId,\n  createdAt\n}': QUERY_ORDER_BY_ID_RESULT;
+    '*[\n  _type == "order"\n] | order(createdAt desc) [0...$limit] {\n  _id,\n  orderNumber,\n  email,\n  total,\n  status,\n  createdAt\n}': QUERY_RECENT_ORDERS_RESULT;
+    '*[\n  _type == "order"\n  && stripePaymentId == $stripePaymentId\n][0]{\n  _id,\n  orderNumber,\n  emailSent {\n    admin,\n    customer\n  }\n}': QUERY_ORDER_BY_STRIPE_PAYMENT_ID_RESULT;
+    '*[\n  _type == "order"\n  && stripeSessionId == $sessionId\n][0] {\n  _id,\n  orderNumber,\n  emailSent {\n    admin,\n    customer\n  }\n}': QUERY_ORDER_BY_STRIPE_SESSION_ID_RESULT;
+    '*[_type == "permission" && lower(customerEmail) == lower($email)][0]': QUERY_REVIEW_PERMISSION_RESULT;
+    '\n*[_type == "pricingTier"] | order(order asc, _createdAt asc) {\n  _id,\n  name,\n  price,\n  description,\n  features\n}\n': QUERY_PRICING_TIERS_RESULT;
+    '\n    *[_type == "bookingProcess"] | order(order asc, _createdAt asc) {\n        _id,\n        title,\n        description,\n        icon,\n        order,\n    }\n': QUERY_BOOKING_PROCESS_RESULT;
+    '\n*[_type == "product"] | order(_createdAt desc) {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    delivery,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': QUERY_PRODUCT_RESULT;
+    '\n*[_type == "product" && slug.current == $slug] | order(_createdAt desc)[0] {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    delivery,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': QUERY_PRODUCT_BY_SLUG_RESULT;
+    '\n*[_type == "product" && _id in $ids] | order(_createdAt desc) {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    delivery,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': QUERY_PRODUCT_BY_IDS_RESULT;
+    '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': QUERY_REVIEWS_RESULT;
+    '\n    *[_type == "social"] | order(_createdAt desc) {\n        _id,\n        name,\n        url,\n        icon\n    }\n': QUERY_SOCIAL_HANDLES_RESULT;
   }
 }

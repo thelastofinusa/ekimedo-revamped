@@ -1,0 +1,156 @@
+import { buttonVariants } from "@/components/shadcn/button";
+import { Skeleton } from "@/components/shadcn/skeleton";
+import { Container } from "@/components/shared/container";
+import { formatDuration, formatPrice } from "@/lib/format";
+import { QUERY_CONSULTATIONS_RESULT } from "@/sanity.types";
+import { CheckCheckIcon, ChevronRightIcon } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
+
+export const RenderConsultations: React.FC<{
+  consultations: QUERY_CONSULTATIONS_RESULT;
+}> = ({ consultations }) => {
+  return (
+    <div className="py-24 lg:py-32">
+      <Container>
+        <div className="grid grid-cols-1 gap-12 md:gap-16 lg:gap-24">
+          {consultations.length > 0
+            ? consultations.map((consultation, index) => (
+                <ConsultationCard key={index} consultations={consultation} />
+              ))
+            : Array.from({ length: 4 }).map((_, index) => (
+                <ConsultationCardLoading key={index} />
+              ))}
+        </div>
+      </Container>
+    </div>
+  );
+};
+
+export const ConsultationCard: React.FC<{
+  consultations: QUERY_CONSULTATIONS_RESULT[number];
+}> = ({ consultations }) => {
+  return (
+    <div className="flex flex-col items-center justify-start gap-4 md:gap-6 lg:flex-row lg:gap-8 lg:even:flex-row-reverse xl:gap-10">
+      <div className="bg-secondary relative aspect-[1.3] w-full flex-1 shadow-xs">
+        <Image
+          src={consultations.image || "/placeholder.svg"}
+          alt={consultations.title || "Service title"}
+          fill
+          priority
+          quality={100}
+          className="object-cover"
+        />
+      </div>
+
+      <div className="flex flex-1 flex-col gap-4 md:gap-6">
+        <p className="text-primary flex items-center gap-2 text-sm font-medium tracking-wider uppercase">
+          <span>{formatDuration(consultations.duration)}</span>
+          <span>•</span>
+          <span>{formatPrice(consultations.price)}</span>
+          {"dresses" in consultations && consultations.dresses && (
+            <>
+              <span>•</span>
+              <span>For {consultations.dresses} Dresses</span>
+            </>
+          )}
+        </p>
+
+        <div className="flex flex-col gap-2 md:gap-3">
+          <h3 className="font-serif text-2xl leading-tight font-medium md:text-3xl">
+            {consultations.title}
+          </h3>
+          <p className="max-w-xl text-sm leading-relaxed opacity-70 md:text-base">
+            {consultations.description}
+          </p>
+        </div>
+
+        {consultations?.includes && consultations.includes.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <p className="text-primary text-sm font-medium tracking-wider uppercase">
+              What&apos;s Included:
+            </p>
+
+            <ul className="flex flex-col gap-2">
+              {consultations.includes.map((item, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm opacity-80 sm:text-base"
+                >
+                  <CheckCheckIcon className="mt-1 size-4" />
+
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <Link
+          href={`/consultations/${consultations.slug}`}
+          className={buttonVariants({
+            variant: "primary",
+            size: "lg",
+            className: "mt-4 w-max",
+          })}
+        >
+          <span>Book Consultation</span>
+          <ChevronRightIcon
+            size={16}
+            className="transition-transform group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1"
+          />
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+export const ConsultationCardLoading = () => {
+  return (
+    <div className="flex flex-col items-center justify-start gap-4 md:gap-6 lg:flex-row lg:gap-8 lg:even:flex-row-reverse xl:gap-10">
+      <Skeleton className="aspect-[1.3] w-full flex-1" />
+      <div className="flex flex-1 flex-col gap-6 md:gap-8">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-14" />
+          <Skeleton className="size-4" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+
+        <div className="flex flex-col gap-2 md:gap-3">
+          <Skeleton className="h-6 w-72" />
+          <div className="flex max-w-xl flex-col gap-1.5">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-[80%]" />
+            <Skeleton className="h-3 w-[95%]" />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <Skeleton className="h-4 w-30" />
+
+          <ul className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-3" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+          </ul>
+        </div>
+
+        <Skeleton className="h-12 w-52" />
+      </div>
+    </div>
+  );
+};

@@ -3,15 +3,16 @@ import Link from "next/link";
 import { StarIcon } from "lucide-react";
 import { Container } from "@/components/shared/container";
 import { formatDate, formatInitials } from "@/lib/format";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { client, clientOptions } from "@/sanity/lib/client";
-import { REVIEW_QUERY } from "@/sanity/queries/review";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/shadcn/avatar";
+import { QUERY_REVIEWS_RESULT } from "@/sanity.types";
 
-export const ReviewsComp = async () => {
-  const reviews = await client.fetch(REVIEW_QUERY, {}, clientOptions);
-
-  if (!reviews.length) return null;
-
+export const ReviewsComp: React.FC<{ reviews: QUERY_REVIEWS_RESULT }> = (
+  props,
+) => {
   return (
     <div className="bg-foreground text-background py-24 lg:py-32">
       <Container>
@@ -25,7 +26,7 @@ export const ReviewsComp = async () => {
         </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {reviews.slice(0, 3).map((review) => {
+          {props.reviews.slice(0, 3).map((review) => {
             return (
               <Link
                 href="/reviews"

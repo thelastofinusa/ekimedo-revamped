@@ -1,7 +1,7 @@
 import { createStore } from "zustand/vanilla";
 import { persist } from "zustand/middleware";
 
-import { CART_STORAGE_KEY } from "@/constants/keys";
+export const CART_STORAGE_KEY: string = "cart.storage";
 
 // Types
 export interface CartItem {

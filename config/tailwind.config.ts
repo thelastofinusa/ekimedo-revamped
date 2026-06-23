@@ -1,4 +1,4 @@
-import { pixelBasedPreset } from "react-email";
+import { pixelBasedPreset } from "@react-email/components";
 import type { Config } from "tailwindcss";
 
 export const tailwindConfig: Config = {

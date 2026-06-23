@@ -1,11 +1,11 @@
+import { buttonVariants } from "@/components/shadcn/button";
+import { Card } from "@/components/shadcn/card";
 import { Container } from "@/components/shared/container";
 import { HeroComp } from "@/components/shared/hero";
-import { buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { siteConfig } from "@/config/site.config";
 import { formatPrice } from "@/lib/format";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { PRICING_TIERS_QUERY } from "@/sanity/queries/pricing";
+import { QUERY_PRICING_TIERS } from "@/sanity/queries/pricing.query";
 import {
   CheckCheckIcon,
   RulerIcon,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
       "Because every gown is custom-designed, final pricing depends on your selected style, fabric, detailing and production timeline. Below are starting ranges to help you plan.",
     images: [
       {
-        url: "/og.png",
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
         alt: siteConfig.title,
@@ -40,13 +40,13 @@ export const metadata: Metadata = {
     title: "Pricing",
     description:
       "Because every gown is custom-designed, final pricing depends on your selected style, fabric, detailing and production timeline. Below are starting ranges to help you plan.",
-    images: ["/twitter-image.png"],
+    images: ["/opengraph.png"],
   },
 };
 
 export default async function Pricing() {
   const pricingTiers = await client.fetch(
-    PRICING_TIERS_QUERY,
+    QUERY_PRICING_TIERS,
     {},
     clientOptions,
   );
@@ -170,7 +170,7 @@ export default async function Pricing() {
               Book a consultation and let&apos;s bring your vision to life.
             </pre>
             <Link
-              href="/book-consultation"
+              href="/consultations"
               className={buttonVariants({ size: "lg" })}
             >
               Schedule Consultation

@@ -3,10 +3,11 @@ import type { StructureResolver } from "sanity/structure";
 import { SlSettings } from "react-icons/sl";
 import {
   BsCalendar2Minus,
-  BsDuffle,
   BsChatSquareDots,
   BsCollectionPlay,
+  BsDuffle,
 } from "react-icons/bs";
+import { RiTimerLine } from "react-icons/ri";
 
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -15,6 +16,7 @@ export const structure: StructureResolver = (S) =>
       // ==================================================
       // CONSULTATIONS & BOOKINGS
       // ==================================================
+
       S.listItem()
         .title("Consultations & Bookings")
         .icon(BsCalendar2Minus)
@@ -22,13 +24,11 @@ export const structure: StructureResolver = (S) =>
           S.list()
             .title("Consultations & Bookings")
             .items([
-              S.documentTypeListItem("consultation").title("Consultations"),
-              S.documentTypeListItem("booking").title("Bookings"),
-              S.documentTypeListItem("inquiry").title("Custom Enquiry"),
+              S.documentTypeListItem("consultation"),
+              S.documentTypeListItem("inquiry"),
+              S.documentTypeListItem("booking"),
               S.divider(),
-              S.documentTypeListItem("blockedSlot").title(
-                "Blocked Dates & Time Slots",
-              ),
+              S.documentTypeListItem("blockedSlot"),
             ]),
         ),
 
@@ -42,11 +42,11 @@ export const structure: StructureResolver = (S) =>
           S.list()
             .title("Products & Orders")
             .items([
-              S.documentTypeListItem("product").title("Products"),
-              S.documentTypeListItem("category").title("Categories"),
-              S.documentTypeListItem("productColor").title("Colors"),
+              S.documentTypeListItem("product"),
+              S.documentTypeListItem("category"),
+              S.documentTypeListItem("productColor"),
               S.divider(),
-              S.documentTypeListItem("order").title("Orders"),
+              S.documentTypeListItem("order"),
             ]),
         ),
 
@@ -54,7 +54,7 @@ export const structure: StructureResolver = (S) =>
       // GALLERY
       // ==================================================
       S.listItem()
-        .title("Gallery")
+        .title("All Gallery Photos")
         .icon(BsCollectionPlay)
         .child(
           S.list()
@@ -62,9 +62,7 @@ export const structure: StructureResolver = (S) =>
             .items([
               S.listItem()
                 .title("All Photos")
-                .child(
-                  S.documentTypeList("gallery").title("All Gallery Photos"),
-                ),
+                .child(S.documentTypeList("gallery")),
 
               S.divider(),
 
@@ -120,10 +118,11 @@ export const structure: StructureResolver = (S) =>
           S.list()
             .title("Website Content")
             .items([
-              S.documentTypeListItem("hero").title("Hero Slides"),
-              S.documentTypeListItem("testimonial").title("Testimonials"),
-              S.documentTypeListItem("social").title("Social Media Links"),
-              S.documentTypeListItem("faq").title("Frequently Asked Questions"),
+              S.documentTypeListItem("hero"),
+              S.documentTypeListItem("testimonial"),
+              S.documentTypeListItem("social"),
+              S.documentTypeListItem("faq"),
+              S.documentTypeListItem("bookingProcess"),
             ]),
         ),
 
@@ -137,12 +136,18 @@ export const structure: StructureResolver = (S) =>
           S.list()
             .title("Business Settings")
             .items([
-              S.documentTypeListItem("pricingTier").title("Pricing"),
-              S.documentTypeListItem("businessHours").title("Business Hours"),
-              S.documentTypeListItem("cancellationPolicy").title(
-                "Cancellation Policy",
-              ),
-              S.documentTypeListItem("permissions").title("Admin Permissions"),
+              S.documentTypeListItem("pricingTier"),
+              S.documentTypeListItem("cancellationPolicy"),
+              S.documentTypeListItem("permission"),
+              S.divider(),
+              S.listItem()
+                .title("Business Hours")
+                .icon(RiTimerLine)
+                .child(
+                  S.document()
+                    .schemaType("businessHours")
+                    .documentId("businessHours"),
+                ),
             ]),
         ),
     ]);

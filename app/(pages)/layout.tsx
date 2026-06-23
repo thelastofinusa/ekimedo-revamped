@@ -1,21 +1,20 @@
 import NextTopLoader from "nextjs-toploader";
 import { Analytics } from "@vercel/analytics/next";
 
-import { Header } from "@/components/shared/header";
-import { Footer } from "@/components/shared/footer";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
 import { SanityLive } from "@/sanity/lib/live";
+import { Header } from "@/components/shared/header";
+import { TooltipProvider } from "@/components/shadcn/tooltip";
 import { CartProvider } from "@/components/providers/cart.provider";
+import { Toaster } from "@/components/shadcn/sonner";
+import { FooterWrapper } from "@/components/wrappers/footer.wrapper";
 
 export default function PagesLayout(props: LayoutProps<"/">) {
   return (
     <TooltipProvider>
       <CartProvider>
-        <NextTopLoader showSpinner={false} color="var(--primary)" />
         <Header />
-        <main>{props.children}</main>
-        <Footer />
+        {props.children}
+        <FooterWrapper />
         <Toaster
           richColors
           theme="dark"
@@ -23,6 +22,7 @@ export default function PagesLayout(props: LayoutProps<"/">) {
           duration={5000}
         />
       </CartProvider>
+      <NextTopLoader showSpinner={false} color="var(--primary)" />
       {process.env.NODE_ENV === "production" && <Analytics />}
       <SanityLive />
     </TooltipProvider>

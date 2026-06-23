@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { siteConfig } from "@/config/site.config";
 import { HeroComp } from "@/components/shared/hero";
-import { InquiryForm } from "./component/inquiry-form";
+import { SubmitForm } from "./components/submit";
 
 export const metadata: Metadata = {
   title: "Make An Inquiry",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
       "Bring your dream dress to life. Our bespoke service creates one-of-a-kind pieces tailored perfectly to your vision and measurements.",
     images: [
       {
-        url: "/og.png",
+        url: "/opengraph.png",
         width: 1200,
         height: 630,
         alt: siteConfig.title,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "Make An Inquiry",
     description:
       "Bring your dream dress to life. Our bespoke service creates one-of-a-kind pieces tailored perfectly to your vision and measurements.",
-    images: ["/twitter-image.png"],
+    images: ["/opengraph.png"],
   },
 };
 
@@ -43,7 +43,7 @@ export default function MakeAnInquiry() {
         imagePath="inquiry.jpeg"
       />
 
-      <InquiryForm />
+      <SubmitForm />
     </div>
   );
 }

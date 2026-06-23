@@ -1,12 +1,13 @@
+import { buttonVariants } from "@/components/shadcn/button";
+import { Container } from "@/components/shared/container";
 import { HeroComp } from "@/components/shared/hero";
 import { siteConfig } from "@/config/site.config";
-import { Metadata } from "next";
-import { ReviewsComp } from "./components/review";
-import { Container } from "@/components/shared/container";
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
 import { client, clientOptions } from "@/sanity/lib/client";
-import { REVIEW_QUERY } from "@/sanity/queries/review";
+import { QUERY_REVIEWS } from "@/sanity/queries/review.query";
+import { Metadata } from "next";
+import Link from "next/link";
+import React from "react";
+import { ReviewsComp } from "./components/review";
 
 export const metadata: Metadata = {
   title: "Client Reviews",
@@ -30,12 +31,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Client Reviews",
     description: `Read what our clients have to say about ${siteConfig.title}.`,
-    images: ["/twitter-image.png"],
+    images: ["/opengraph.png"],
   },
 };
 
 export default async function Reviews() {
-  const reviews = await client.fetch(REVIEW_QUERY, {}, clientOptions);
+  const reviews = await client.fetch(QUERY_REVIEWS, {}, clientOptions);
 
   return (
     <div className="flex-1 overflow-x-clip">
@@ -54,8 +55,8 @@ export default async function Reviews() {
       <ReviewsComp reviews={reviews} />
 
       <section className="bg-card py-24">
-        <Container size="xs" className="text-center">
-          <div className="mb-10 flex flex-col items-center">
+        <Container size="xs" className="text-center flex flex-col gap-12">
+          <div className="flex flex-col items-center">
             <p className="mb-2 font-serif text-xl italic">
               Reflect on your couture journey
             </p>
@@ -66,14 +67,14 @@ export default async function Reviews() {
               the final result with you.
             </pre>
             <Link
-              href="/reviews/new"
+              href="/reviews/submit"
               className={buttonVariants({ size: "lg" })}
             >
               Share Your Review
             </Link>
           </div>
 
-          <div className="border-border/50 border-t pt-16 text-sm leading-relaxed font-light sm:text-base">
+          <div className="border-border/50 border-t pt-10 text-sm leading-relaxed font-light sm:text-base">
             <p className="mx-auto max-w-2xl">
               <strong>Note:</strong> Reviews are reserved for clients who have
               completed a consultation, alteration, or custom design service.

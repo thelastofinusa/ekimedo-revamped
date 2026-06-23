@@ -17,7 +17,7 @@ export const HeroComp: React.FC<{
     : imagePath?.startsWith("/")
       ? imagePath
       : imagePath
-        ? `/assets/hero/${imagePath}`
+        ? `/hero/${imagePath}`
         : undefined;
 
   return (
@@ -46,7 +46,7 @@ export const HeroComp: React.FC<{
             <p className="text-background/60 max-w-[600px]">{description}</p>
           )}
 
-          {comp && <div>{comp}</div>}
+          {comp && <div className="mt-6">{comp}</div>}
         </motion.div>
       </Container>
     </div>

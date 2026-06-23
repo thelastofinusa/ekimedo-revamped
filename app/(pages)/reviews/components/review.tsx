@@ -8,11 +8,15 @@ import { AnimatePresence, motion } from "motion/react";
 import { Lightbox } from "@/components/shared/lightbox";
 import { formatDate, formatInitials } from "@/lib/format";
 import { Container } from "@/components/shared/container";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { REVIEW_QUERY_RESULT } from "@/sanity.types";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/shadcn/avatar";
+import { QUERY_REVIEWS_RESULT } from "@/sanity.types";
 
 export const ReviewsComp: React.FC<{
-  reviews: REVIEW_QUERY_RESULT;
+  reviews: QUERY_REVIEWS_RESULT;
 }> = ({ reviews }) => {
   const [lightbox, setLightbox] = React.useState<{
     images: string[];

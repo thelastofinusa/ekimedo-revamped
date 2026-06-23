@@ -22,8 +22,3 @@ export const writeClient = createClient({
 export const clientOptions: FilteredResponseQueryOptions = {
   next: { revalidate: 30 },
 };
-
-export const uploadFile = async (file: File) => {
-  const asset = await writeClient.assets.upload("image", file);
-  return asset._id; // or asset.url
-};

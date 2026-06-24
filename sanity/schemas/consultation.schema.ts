@@ -3,7 +3,7 @@ import { MdOutlineLaptopChromebook } from "react-icons/md";
 
 export const consultationType = defineType({
   name: "consultation",
-  title: "Consultation",
+  title: "Consultations",
   type: "document",
   icon: MdOutlineLaptopChromebook,
   fields: [

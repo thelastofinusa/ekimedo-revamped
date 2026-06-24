@@ -28,5 +28,18 @@ export const fieldItemType = defineType({
       title: "Price Range",
       type: "fieldRange",
     }),
+    defineField({
+      name: "images",
+      title: "Images",
+      type: "array",
+      of: [
+        {
+          type: "image",
+          name: "asset",
+          title: "Image",
+          options: { hotspot: true },
+        },
+      ],
+    }),
   ],
 });

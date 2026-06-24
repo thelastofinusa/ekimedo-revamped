@@ -18,6 +18,8 @@ import { QUERY_SOCIAL_HANDLES_RESULT } from "@/sanity.types";
 import { CustomerBookingEmail } from "@/components/emails/customer/customerBooking.email";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-static";
+
 export default async function EmailPreview() {
   if (process.env.NODE_ENV === "production") return notFound();
 

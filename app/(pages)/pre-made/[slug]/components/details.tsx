@@ -9,6 +9,7 @@ import { Container } from "@/components/shared/container";
 import { QUERY_PRODUCT_BY_SLUG_RESULT } from "@/sanity.types";
 import {
   useCartActions,
+  useCartItems,
   useProductTotalQuantity,
 } from "@/components/providers/cart.provider";
 import { formatPrice } from "@/lib/format";
@@ -23,6 +24,9 @@ import { Button, buttonVariants } from "@/components/shadcn/button";
 import { SizeChart } from "@/components/shared/sizeChart";
 import { toast } from "sonner";
 import { StockBadge } from "@/components/shared/stockBadge";
+import { Alert, AlertTitle } from "@/components/shadcn/alert";
+import { RiAlarmWarningLine } from "react-icons/ri";
+import { ButtonGroup, ButtonGroupText } from "@/components/shadcn/button-group";
 
 type Snapshot = {
   _type: "image" | "file";
@@ -96,7 +100,7 @@ export const ProductDetails: React.FC<{
         },
         quantity,
       );
-      toast.success(`${product?.name} added to cart`, {
+      toast.success("Successfully added to cart", {
         description: `Quantity: ${quantity}${selectedSize ? `, Size: ${selectedSize}` : ""} ${selectedColor ? `, Color: ${selectedColor}` : ""}`,
       });
     }
@@ -105,7 +109,7 @@ export const ProductDetails: React.FC<{
   return (
     <div className="py-28 md:py-36">
       <Container size="sm" className="flex flex-col gap-8">
-        <nav className="text-muted-foreground hidden items-center text-sm md:flex">
+        <nav className="text-muted-foreground items-center text-sm flex">
           <Link
             href="/pre-made"
             className="hover:text-foreground transition-colors"
@@ -203,8 +207,10 @@ export const ProductDetails: React.FC<{
               <h2 className="font-sans text-2xl font-medium">
                 {product?.name}
               </h2>
-              <p className="flex items-center gap-3 text-base font-medium md:text-lg">
-                <span>{formatPrice(product?.price)}</span>
+              <p className="flex items-center gap-3">
+                <span className="font-semibold text-xl">
+                  {formatPrice(product?.price)}
+                </span>
                 {isOutOfStock ? (
                   <Badge variant="destructive">Out of Stock</Badge>
                 ) : (
@@ -235,12 +241,16 @@ export const ProductDetails: React.FC<{
                       if (!color || !color.name || !color.value) return null;
                       return (
                         <Tooltip key={color.name}>
-                          <TooltipTrigger asChild>
+                          <TooltipTrigger asChild disabled={isOutOfStock}>
                             <button
                               key={color.name}
-                              onClick={() => setSelectedColor(color.name || "")}
+                              onClick={() =>
+                                setSelectedColor((prev) =>
+                                  prev === color.name ? "" : (color.name ?? ""),
+                                )
+                              }
                               className={cn(
-                                "ring-ring size-7 cursor-pointer rounded-none ring transition-all focus:outline-none",
+                                "ring-ring size-7 cursor-pointer rounded-none disabled:opacity-50 disabled:pointer-events-none ring transition-all focus:outline-none",
                                 {
                                   "ring-ring ring-2 ring-offset-2":
                                     selectedColor === color.name,
@@ -249,6 +259,7 @@ export const ProductDetails: React.FC<{
                               style={{ backgroundColor: color.value }}
                               title={color.name}
                               type="button"
+                              disabled={isOutOfStock}
                             />
                           </TooltipTrigger>
                           <TooltipContent
@@ -280,12 +291,12 @@ export const ProductDetails: React.FC<{
                       <Button
                         key={size}
                         size="sm"
-                        onClick={() => setSelectedSize(size)}
+                        onClick={() =>
+                          setSelectedSize((prev) => (prev === size ? "" : size))
+                        }
                         variant={selectedSize === size ? "default" : "outline"}
-                        className={cn(
-                          "rounded-none font-mono text-xs! font-normal tracking-normal",
-                          selectedSize === size ? "pointer-events-none" : "",
-                        )}
+                        disabled={isOutOfStock}
+                        className="rounded-none font-mono text-xs! font-normal tracking-normal"
                       >
                         {size}
                       </Button>
@@ -295,79 +306,88 @@ export const ProductDetails: React.FC<{
               )}
 
               {/* Quantity Selector */}
-              {!isOutOfStock && (
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs tracking-wider uppercase">
-                    Quantity
-                  </span>
-                  <div className="border-input bg-background flex h-10 w-max items-center border">
-                    <button
-                      type="button"
-                      onClick={handleDecrement}
-                      disabled={quantity <= 1}
-                      className="text-muted-foreground hover:text-foreground flex h-full items-center justify-center px-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <MinusIcon className="size-4" />
-                    </button>
-                    <span className="w-12 text-center font-mono text-sm select-none">
-                      {quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleIncrement}
-                      disabled={quantity >= maxAvailable}
-                      className="text-muted-foreground hover:text-foreground flex h-full items-center justify-center px-3 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <PlusIcon className="size-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                size="xl"
-                className="w-full rounded-none"
-                onClick={handleAddToCart}
-                disabled={
-                  isOutOfStock ||
-                  quantity === 0 ||
-                  quantityInCart + quantity > stock ||
-                  ((product?.sizes?.length ?? 0) > 0 && !selectedSize) ||
-                  ((product?.colors?.length ?? 0) > 0 && !selectedColor)
-                }
-              >
-                <span>
-                  {isOutOfStock
-                    ? "Out of stock"
-                    : quantityInCart >= stock
-                      ? "Max stock in cart"
-                      : "Add to Cart"}
+              <div className="flex flex-col w-full gap-2">
+                <span className="text-xs tracking-wider uppercase">
+                  Quantity
                 </span>
-              </Button>
-            </div>
 
-            <div className="mt-6 mb-6">
-              <p className="text-sm font-semibold">
-                {product?.delivery ||
-                  "Estimated delivery: 4-6 weeks. Complementary alteration is included."}
-              </p>
-            </div>
+                <ButtonGroup className="w-full">
+                  <Button
+                    variant="outline"
+                    onClick={handleDecrement}
+                    disabled={quantity <= 1 || isOutOfStock}
+                    className="h-10 shadow-none active:translate-y-0 active:translate-x-0"
+                  >
+                    <MinusIcon className="size-4" />
+                  </Button>
+                  <ButtonGroupText className="shadow-none opacity-50 active:translate-y-0 active:translate-x-0">
+                    {quantity}
+                  </ButtonGroupText>
+                  <Button
+                    variant="outline"
+                    onClick={handleIncrement}
+                    disabled={quantity >= maxAvailable || isOutOfStock}
+                    className="h-10 shadow-none active:translate-y-0 active:translate-x-0"
+                  >
+                    <PlusIcon className="size-4" />
+                  </Button>
 
-            <div className="mt-6 border-t pt-6">
-              <p className="text-muted-foreground text-sm">
-                Want to go custom? Book a consultation with our designer to
-                refine this design to your desired taste.
-              </p>
+                  <Button
+                    className="flex-1 shadow-none"
+                    variant="primary"
+                    onClick={handleAddToCart}
+                    disabled={
+                      isOutOfStock ||
+                      quantity === 0 ||
+                      quantityInCart + quantity > stock ||
+                      ((product?.sizes?.length ?? 0) > 0 && !selectedSize) ||
+                      ((product?.colors?.length ?? 0) > 0 && !selectedColor)
+                    }
+                  >
+                    <span>
+                      {isOutOfStock
+                        ? "Out of stock"
+                        : quantityInCart >= stock
+                          ? "Max stock in cart"
+                          : !selectedSize && !selectedColor
+                            ? "Choose size & color"
+                            : !selectedSize
+                              ? "Choose your size"
+                              : !selectedColor
+                                ? "Choose a color"
+                                : "Add to Cart"}
+                    </span>
+                  </Button>
+                </ButtonGroup>
+              </div>
 
-              <Link
-                href="/consultations"
-                className={buttonVariants({
-                  variant: "outline",
-                  className: "mt-4 rounded-none",
-                })}
-              >
-                Start Consultation
-              </Link>
+              {!isOutOfStock && (
+                <>
+                  <Alert variant="info">
+                    <RiAlarmWarningLine />
+                    <AlertTitle>
+                      {product?.delivery ||
+                        "Estimated delivery: 4-6 weeks. Complementary alteration is included."}
+                    </AlertTitle>
+                  </Alert>
+
+                  <div className="border-t pt-6">
+                    <p className="text-muted-foreground text-sm">
+                      Need adjustments or a custom fit? Schedule a consultation
+                      and we&apos;ll help tailor this piece to your preferences.
+                    </p>
+
+                    <Link
+                      href="/consultations"
+                      className={buttonVariants({
+                        className: "mt-4 rounded-none",
+                      })}
+                    >
+                      Start Consultation
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

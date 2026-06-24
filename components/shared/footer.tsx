@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 import { Container } from "./container";
 import { Logo } from "./logo";
 import { Button, buttonVariants } from "../shadcn/button";
-import { FaApplePay, FaGooglePay, FaStripe } from "react-icons/fa";
-import { RiVisaLine } from "react-icons/ri";
+import { FaStripe } from "react-icons/fa";
 import { resolveIcon } from "@/lib/icons";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../shadcn/tooltip";
 import { footerRoutes } from "@/constants/navigation";
@@ -132,7 +131,7 @@ export const Footer: React.FC<{
               <Button variant={"outline"} size="xs" disabled>
                 <FaStripe className="size-7" />
               </Button>
-              <Button variant={"outline"} size="xs" disabled>
+              {/* <Button variant={"outline"} size="xs" disabled>
                 <FaApplePay className="size-7" />
               </Button>
               <Button variant={"outline"} size="xs" disabled>
@@ -140,7 +139,7 @@ export const Footer: React.FC<{
               </Button>
               <Button variant={"outline"} size="xs" disabled>
                 <FaGooglePay className="size-7" />
-              </Button>
+              </Button> */}
             </div>
 
             <div className="flex items-center gap-2.5">

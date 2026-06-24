@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { containerVariants } from "./container";
 import { Logo } from "./logo";
 import { useTotalItems } from "../providers/cart.provider";
-import { Button, buttonVariants } from "../shadcn/button";
+import { Button } from "../shadcn/button";
 import { RiUser6Line } from "react-icons/ri";
 import { HiOutlineMenuAlt4 } from "react-icons/hi";
 import { SlHandbag } from "react-icons/sl";
@@ -33,6 +33,8 @@ import { headerRoutes } from "@/constants/navigation";
 import { Route } from "next";
 import { QUERY_REVIEW_PERMISSION } from "@/sanity/queries/permission.query";
 import { client, clientOptions } from "@/sanity/lib/client";
+import { CartSheet } from "../sheets/cart.sheet";
+import { MenuSheet } from "../sheets/menu.sheet";
 
 const FORCE_ACTIVE_ROUTES = [
   "/about-us",
@@ -64,6 +66,8 @@ export const Header = () => {
   const [isActive, setIsActive] = React.useState<boolean>(false);
   const [isScrolling, setIsScrolling] = React.useState<boolean>(false);
   const [hasPermission, setHasPermission] = React.useState<boolean>(true);
+  const [openMenu, setOpenMenu] = React.useState<boolean>(false);
+  const [openCart, setOpenCart] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (forceActive) {
@@ -110,18 +114,34 @@ export const Header = () => {
     };
   }, [forceActive]);
 
+  // Fetch review permission with error handling
   React.useEffect(() => {
     if (!customerEmail) return;
 
-    (async () => {
-      const result = await client.fetch(
-        QUERY_REVIEW_PERMISSION,
-        { email: customerEmail },
-        clientOptions,
-      );
+    let isMounted = true;
 
-      setHasPermission(Boolean(result));
+    (async () => {
+      try {
+        const result = await client.fetch(
+          QUERY_REVIEW_PERMISSION,
+          { email: customerEmail },
+          clientOptions,
+        );
+        if (isMounted) {
+          setHasPermission(Boolean(result));
+        }
+      } catch (error) {
+        console.error("Failed to fetch review permission:", error);
+        if (isMounted) {
+          // Default to no permission on error to avoid blocking the user
+          setHasPermission(false);
+        }
+      }
     })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [customerEmail]);
 
   return (
@@ -216,30 +236,31 @@ export const Header = () => {
 
         <div className="flex w-full sm:max-w-[150px] justify-end">
           <div className="pointer-events-auto flex items-center gap-2">
-            <Link
-              href="/pre-made/checkout"
-              className={buttonVariants({
-                size: totalItems > 0 ? "sm" : "icon-sm",
-                variant: isActive ? "default" : "secondary",
-              })}
-            >
-              <SlHandbag className="size-4" />
-              {totalItems > 0 && (
-                <span className="font-mono text-xs tracking-tighter">
-                  [{totalItems > 99 ? "99+" : totalItems}]
-                </span>
-              )}
-              <span className="sr-only">Open cart ({totalItems} items)</span>
-            </Link>
+            <CartSheet openCart={openCart} setOpenCart={setOpenCart}>
+              <Button
+                size={totalItems > 0 ? "sm" : "icon-sm"}
+                variant={isActive ? "default" : "secondary"}
+              >
+                <SlHandbag className="size-4" />
+                {totalItems > 0 && (
+                  <span className="font-mono text-xs tracking-tighter">
+                    [{totalItems > 99 ? "99+" : totalItems}]
+                  </span>
+                )}
+                <span className="sr-only">Open cart ({totalItems} items)</span>
+              </Button>
+            </CartSheet>
 
-            <Button
-              size="icon-sm"
-              variant={isActive ? "default" : "secondary"}
-              className="lg:hidden"
-            >
-              <HiOutlineMenuAlt4 className="size-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
+            <MenuSheet openMenu={openMenu} setOpenMenu={setOpenMenu}>
+              <Button
+                size="icon-sm"
+                variant={isActive ? "default" : "secondary"}
+                className="lg:hidden"
+              >
+                <HiOutlineMenuAlt4 className="size-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </MenuSheet>
 
             <div className="flex items-center gap-2">
               <Separator

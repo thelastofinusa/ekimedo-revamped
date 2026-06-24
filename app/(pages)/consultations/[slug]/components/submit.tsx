@@ -247,7 +247,7 @@ export const SubmitForm: React.FC<{
 
                         {renderFieldsWithGroups(
                           consultation,
-                          item.fields as FormCard["fields"],
+                          item.fields as unknown as FormCard["fields"],
                           form,
                           isSubmitting,
                         )}

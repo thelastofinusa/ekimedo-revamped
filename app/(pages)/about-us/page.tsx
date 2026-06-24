@@ -6,6 +6,8 @@ import { buttonVariants } from "@/components/shadcn/button";
 import Image from "next/image";
 import { CTA } from "@/components/shared/cta";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "About Us",
   description: `Learn about ${siteConfig.title}, a luxury couture maison crafting timeless bridal, prom, and special-event designs with meticulous artistry.`,

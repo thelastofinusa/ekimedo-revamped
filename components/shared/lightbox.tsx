@@ -50,6 +50,7 @@ export function Lightbox({
           className="bg-foreground/95 fixed inset-0 z-100 flex items-center justify-center p-4 backdrop-blur-sm md:p-12"
         >
           <Button
+            type="button"
             size="icon-sm"
             variant="secondary"
             onClick={onClose}
@@ -61,6 +62,7 @@ export function Lightbox({
           {images.length > 1 && (
             <>
               <Button
+                type="button"
                 size="icon"
                 variant="secondary"
                 onClick={previous}
@@ -70,6 +72,7 @@ export function Lightbox({
               </Button>
 
               <Button
+                type="button"
                 size="icon"
                 variant="secondary"
                 onClick={next}

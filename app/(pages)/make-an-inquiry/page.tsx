@@ -3,6 +3,8 @@ import { siteConfig } from "@/config/site.config";
 import { HeroComp } from "@/components/shared/hero";
 import { SubmitForm } from "./components/submit";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "Make An Inquiry",
   description:

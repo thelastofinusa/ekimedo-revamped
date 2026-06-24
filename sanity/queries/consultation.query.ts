@@ -20,17 +20,21 @@ export const QUERY_CONSULTATIONS = defineQuery(`
   includes[],
 
   formCards[] {
+    _type,
     title,
     info,
     description,
 
     fields[] {
+      _type,
+      _key,
       name,
       type,
       label,
       placeholder,
 
       description {
+        _type,
         value,
         path,
         newTab
@@ -42,11 +46,14 @@ export const QUERY_CONSULTATIONS = defineQuery(`
       defaultValue,
 
       icons {
+        _type,
         start {
+          _type,
           icon,
           value
         },
         end {
+          _type,
           icon,
           value
         }
@@ -55,11 +62,15 @@ export const QUERY_CONSULTATIONS = defineQuery(`
       sizes[],
 
       options[] {
+        _type,
+        _key,
         id,
         label,
         description,
 
         interests[] {
+          _key,
+          _type,
           id,
           label,
           description
@@ -67,11 +78,15 @@ export const QUERY_CONSULTATIONS = defineQuery(`
       },
 
       items[] {
+        _type,
+        _key,
         id,
         title,
         description,
+        "images": images[].asset->url,
 
         range {
+          _type,
           from,
           to
         }
@@ -101,17 +116,21 @@ export const QUERY_CONSULTATION_BY_SLUG = defineQuery(`
   includes[],
 
   formCards[] {
+    _type,
     title,
     info,
     description,
 
     fields[] {
+      _type,
+      _key,
       name,
       type,
       label,
       placeholder,
 
       description {
+        _type,
         value,
         path,
         newTab
@@ -123,11 +142,14 @@ export const QUERY_CONSULTATION_BY_SLUG = defineQuery(`
       defaultValue,
 
       icons {
+        _type,
         start {
+          _type,
           icon,
           value
         },
         end {
+          _type,
           icon,
           value
         }
@@ -136,11 +158,15 @@ export const QUERY_CONSULTATION_BY_SLUG = defineQuery(`
       sizes[],
 
       options[] {
+        _type,
+        _key,
         id,
         label,
         description,
 
         interests[] {
+          _key,
+          _type,
           id,
           label,
           description
@@ -148,11 +174,15 @@ export const QUERY_CONSULTATION_BY_SLUG = defineQuery(`
       },
 
       items[] {
+        _type,
+        _key,
         id,
         title,
         description,
+        "images": images[].asset->url,
 
         range {
+          _type,
           from,
           to
         }

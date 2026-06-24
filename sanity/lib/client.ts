@@ -20,5 +20,5 @@ export const writeClient = createClient({
 });
 
 export const clientOptions: FilteredResponseQueryOptions = {
-  next: { revalidate: 30 },
+  next: { revalidate: 300 },
 };

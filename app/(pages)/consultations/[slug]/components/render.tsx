@@ -7,7 +7,7 @@ import {
   UseFormReturn,
 } from "react-hook-form";
 import { FieldOption, FormField } from "@/sanity.types";
-import { FormControl } from "@/components/shadcn/form";
+import { FormControl, FormLabel } from "@/components/shadcn/form";
 import {
   InputGroup,
   InputGroupAddon,
@@ -40,7 +40,7 @@ import {
 import { ImagePlusIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/shadcn/button";
 import { Calendar } from "@/components/shadcn/calendar";
-import { formatDate, formatTimeTo12Hour } from "@/lib/format";
+import { formatDate, formatPrice, formatTimeTo12Hour } from "@/lib/format";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/shadcn/checkbox";
@@ -50,6 +50,9 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/shadcn/skeleton";
 import { MAX_FILES_UPLOAD, MAX_SIZE_UPLOAD } from "@/lib/zod";
 import { getAvailableTimes } from "@/actions/consultation.action";
+import { RadioGroup, RadioGroupItem } from "@/components/shadcn/radio-group";
+import { Lightbox } from "@/components/shared/lightbox";
+import { urlFor } from "@/sanity/lib/image";
 
 export const RenderControl: React.FC<{
   isSubmitting: boolean;
@@ -68,6 +71,11 @@ export const RenderControl: React.FC<{
 }) => {
   const RenderInput =
     data.type === "textarea" ? InputGroupTextarea : InputGroupInput;
+  const [lightbox, setLightbox] = React.useState<{
+    images: string[];
+    title: string;
+    initialIndex: number;
+  } | null>(null);
 
   switch (data.type) {
     case "text":
@@ -127,6 +135,31 @@ export const RenderControl: React.FC<{
           </InputWithAddons>
         </FormControl>
       );
+    case "size": {
+      return (
+        <FormControl>
+          <div className="flex flex-wrap gap-2">
+            {data.sizes?.map((ds) => {
+              const isSelected = field.value === ds;
+              return (
+                <Button
+                  key={ds}
+                  size="sm"
+                  variant={isSelected ? "default" : "outline"}
+                  type="button"
+                  className={cn(
+                    "font-mono text-xs! font-normal tracking-normal",
+                  )}
+                  onClick={() => field.onChange(ds)}
+                >
+                  {ds}
+                </Button>
+              );
+            })}
+          </div>
+        </FormControl>
+      );
+    }
     case "select":
       return (
         <FormControl>
@@ -307,6 +340,96 @@ export const RenderControl: React.FC<{
             })}
           </ul>
         </FormControl>
+      );
+    }
+    case "radio": {
+      return (
+        <React.Fragment>
+          <FormControl>
+            <RadioGroup
+              onValueChange={(value) => field.onChange(value)}
+              value={field.value}
+              className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2"
+              disabled={isSubmitting}
+            >
+              {data.items?.map((item, index) => {
+                // Safely extract image URLs as string[]
+                const imageUrls = Array.isArray(item.images)
+                  ? (item.images as unknown as string[]).filter(
+                      (img): img is string => typeof img === "string",
+                    )
+                  : [];
+
+                return (
+                  <FormLabel
+                    key={item.id}
+                    htmlFor={item.id}
+                    className={cn(
+                      "border-input has-data-[state=checked]:border-primary has-focus-visible:border-ring has-focus-visible:ring-ring relative flex w-full cursor-pointer flex-col gap-0! rounded-md border p-4 shadow-xs transition-[color,box-shadow] outline-none has-focus-visible:ring-2",
+                      {
+                        "border-destructive": form.formState.errors.budgetType,
+                        "pointer-events-none opacity-50": isSubmitting,
+                      },
+                    )}
+                  >
+                    <div className="flex w-full items-center justify-between gap-4">
+                      <RadioGroupItem
+                        value={item?.id as string}
+                        id={item?.id}
+                        disabled={isSubmitting}
+                      />
+
+                      <p className="text-[11px]!">
+                        {`${formatPrice(item?.range?.from)}${item?.range?.to ? ` – ${formatPrice(item?.range.to)}` : "+"}`}
+                      </p>
+                    </div>
+
+                    <div className="my-4 flex w-full flex-col gap-1">
+                      <p className="text-foreground text-xs!">{item.title}</p>
+                      <p className="text-xs! leading-normal font-medium tracking-normal normal-case">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    {imageUrls.length > 0 ? (
+                      <Button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightbox({
+                            images: imageUrls,
+                            title: item.title as string,
+                            initialIndex: 0,
+                          });
+                        }}
+                        className="w-full"
+                      >
+                        Preview Examples
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        disabled
+                        variant="outline"
+                        className="w-full"
+                      >
+                        No available preview
+                      </Button>
+                    )}
+                  </FormLabel>
+                );
+              })}
+            </RadioGroup>
+          </FormControl>
+
+          <Lightbox
+            open={!!lightbox}
+            images={lightbox?.images ?? []}
+            title={lightbox?.title}
+            initialIndex={lightbox?.initialIndex ?? 0}
+            onClose={() => setLightbox(null)}
+          />
+        </React.Fragment>
       );
     }
     case "file":

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 import { client } from "@/sanity/lib/client";
 import { QUERY_PRODUCT_BY_IDS } from "@/sanity/queries/product.query";
@@ -30,6 +30,7 @@ interface UseCartStockReturn {
 export function useCartStock(items: CartItem[]): UseCartStockReturn {
   const [stockMap, setStockMap] = useState<StockMap>(new Map());
   const [isLoading, setIsLoading] = useState(false);
+  const isMounted = useRef(true);
 
   // Memoize product IDs to use as stable dependency
   const productIds = useMemo(
@@ -37,9 +38,13 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
     [items],
   );
 
-  const fetchStock = useCallback(async () => {
+  // Refetch function (exposed to the user)
+  const refetch = async () => {
     if (items.length === 0) {
-      setStockMap(new Map());
+      if (isMounted.current) {
+        setStockMap(new Map());
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -60,15 +65,6 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
       }
 
       for (const item of items) {
-        // If we already processed this product (and stockMap is keyed by productId), we might overwrite.
-        // But stockMap should report status for the PRODUCT.
-        // Wait, if I have 2 variants, both map to same productId.
-        // stockMap.set(productId, ...) will overwrite.
-        // So I should iterate unique productIds or ensure consistent status.
-
-        // Actually, the status (isOutOfStock, exceedsStock) depends on the TOTAL quantity.
-        // So it is the same for all variants of that product.
-
         const product = products.find(
           (p: { _id: string }) => p._id === item.productId,
         );
@@ -83,28 +79,36 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
           availableQuantity: Math.max(
             0,
             currentStock - (totalQuantity - item.quantity),
-          ), // approximate?
-          // availableQuantity is tricky if multiple variants.
-          // If I have 3 S and 3 M. Stock 5.
-          // Total 6. Exceeds.
-          // availableQuantity?
-          // This field might be used to show "Only X left".
-          // If we show "Only 5 left" on both lines, it's fine.
+          ),
         });
       }
 
-      setStockMap(newStockMap);
+      if (isMounted.current) {
+        setStockMap(newStockMap);
+      }
     } catch (error) {
-      console.error("Failed to fetch stock:", error);
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Failed to fetch stock:", error);
+      }
+      if (isMounted.current) {
+        setStockMap(new Map());
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
-  }, [items, productIds]);
+  };
 
   useEffect(() => {
+    isMounted.current = true;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchStock();
-  }, [fetchStock]);
+    refetch();
+
+    return () => {
+      isMounted.current = false;
+    };
+  }, [items, productIds]);
 
   const hasStockIssues = Array.from(stockMap.values()).some(
     (info) => info.isOutOfStock || info.exceedsStock,
@@ -114,6 +118,6 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
     stockMap,
     isLoading,
     hasStockIssues,
-    refetch: fetchStock,
+    refetch,
   };
 }

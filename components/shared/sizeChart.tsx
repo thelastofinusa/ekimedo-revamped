@@ -21,7 +21,7 @@ export const SizeChart: React.FC<{ className?: string }> = ({ className }) => {
         <div
           role="button"
           className={cn(
-            "text-primary flex cursor-pointer items-center gap-2",
+            "text-primary flex cursor-pointer underline items-center gap-2",
             className,
           )}
         >

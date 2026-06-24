@@ -8,6 +8,7 @@ import {
   BsDuffle,
 } from "react-icons/bs";
 import { RiTimerLine } from "react-icons/ri";
+import { apiVersion } from "./env";
 
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -71,6 +72,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentList()
                     .title("Bridal Collection")
+                    .apiVersion(apiVersion)
                     .filter(
                       `_type == "gallery" && category->slug.current == "bridal-dresses"`,
                     ),
@@ -81,6 +83,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentList()
                     .title("Prom Collection")
+                    .apiVersion(apiVersion)
                     .filter(
                       `_type == "gallery" && category->slug.current == "prom-dresses"`,
                     ),
@@ -91,6 +94,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentList()
                     .title("Special Events Collection")
+                    .apiVersion(apiVersion)
                     .filter(
                       `_type == "gallery" && category->slug.current == "special-events"`,
                     ),
@@ -103,6 +107,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentList()
                     .title("Featured Photos")
+                    .apiVersion(apiVersion)
                     .filter(`_type == "gallery" && featured == true`),
                 ),
             ]),

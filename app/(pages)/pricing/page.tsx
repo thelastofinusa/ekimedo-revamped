@@ -117,7 +117,7 @@ export default async function Pricing() {
                   <div className="flex flex-col justify-between gap-8 md:flex-row md:items-start">
                     {/* Tier Info */}
                     <div className="flex-1">
-                      <h2 className="group-hover:text-primary mb-3 font-serif text-3xl font-normal transition-colors">
+                      <h2 className="group-hover:text-primary mb-3 font-serif text-2xl font-normal transition-colors">
                         {tier.name}
                       </h2>
                       <p className="text-muted-foreground mb-6 max-w-md text-sm leading-relaxed font-normal">
@@ -148,7 +148,7 @@ export default async function Pricing() {
                           Starts At
                         </span>
                       </div>
-                      <div className="text-primary mb-6 text-4xl">
+                      <div className="text-primary mb-6 text-3xl font-medium">
                         {formatPrice(tier.price)}
                       </div>
                     </div>

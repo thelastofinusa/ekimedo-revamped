@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { StyleSheetManager } from "styled-components";
+import isPropValid from "@emotion/is-prop-valid";
 
 import "./globals.css";
 import { fontVariables } from "@/fonts";
@@ -62,7 +64,16 @@ export default function RootLayout(props: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={fontVariables("antialiased")}>
-        <ClerkProvider>{props.children}</ClerkProvider>
+        <ClerkProvider>
+          <StyleSheetManager
+            shouldForwardProp={(propName, target) => {
+              if (typeof target === "string") return isPropValid(propName);
+              return true;
+            }}
+          >
+            {props.children}
+          </StyleSheetManager>
+        </ClerkProvider>
       </body>
     </html>
   );

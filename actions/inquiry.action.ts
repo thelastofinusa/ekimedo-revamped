@@ -1,103 +1,94 @@
 "use server";
-import { randomUUID } from "crypto";
-import { zSchema } from "@/lib/zod";
+
+import { AdminInquiryEmail } from "@/components/emails/admin/adminInquiry.email";
+import { siteConfig } from "@/config/site.config";
+import { EVENT_TYPES_KEYS } from "@/constants/others";
 import { getResend } from "@/lib/resend";
+import { zSchema, ZSchemaType } from "@/lib/zod";
 import { client, writeClient } from "@/sanity/lib/client";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
-import { EVENT_TYPES_KEYS } from "@/constants/others";
-import { AdminInquiryEmail } from "@/components/emails/admin/adminInquiry.email";
+import { del } from "@vercel/blob";
+import { randomUUID } from "crypto";
 
-/**
- * Server action to submit a review
- * @param formData - The review form data
- */
-export async function submitInquiryForm(formData: FormData) {
+export async function submitInquiryForm(
+  formData: ZSchemaType["inquiry"],
+  blobUrls: string[],
+) {
   const resend = getResend();
-  // Convert FormData to object for Zod validation
-  const rawData: Record<string, unknown> = {};
-  for (const [key, value] of formData.entries()) {
-    if (key !== "inspirationPhotos") {
-      if (key === "eventDate" && typeof value === "string") {
-        // Parse the date string properly
-        const date = new Date(value);
-        rawData[key] = !isNaN(date.getTime()) ? date : value;
-      } else {
-        rawData[key] = value;
-      }
-    }
-    if (key === "budget") {
-      rawData[key] = Number(value);
-    }
-  }
-  rawData.inspirationPhotos = formData.getAll("inspirationPhotos") as File[];
 
-  const validationResult = zSchema.inquiry.safeParse(rawData);
-
-  if (!validationResult.success) {
+  const validation = zSchema.inquiry.safeParse(formData);
+  if (!validation.success && blobUrls.length <= 0) {
     return {
       success: false,
-      message:
-        validationResult.error.message ?? "Missing or invalid required fields.",
-      details: validationResult.error.flatten(),
+      message: "Invalid form data",
+      details: validation.error.flatten(),
     };
   }
 
   const { fullName, email, phone, eventType, eventDate, budget, dreamDress } =
-    validationResult.data;
-  const inspirationPhotos = formData.getAll("inspirationPhotos") as File[];
+    validation.data!;
 
   try {
-    const uploadedAssets = [];
-    const uploadedAssetUrls: string[] = [];
+    const uploadedAssets: {
+      _key: string;
+      _type: string;
+      asset: {
+        _type: string;
+        _ref: string;
+      };
+    }[] = [];
+    const uploadedAssetsUrls: string[] = [];
 
-    if (inspirationPhotos && inspirationPhotos.length > 0) {
-      for (const image of inspirationPhotos) {
-        if (image.size > 0) {
-          const arrayBuffer = await image.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const asset = await writeClient.assets.upload("image", buffer, {
-            filename: image.name,
-          });
+    // 1. Download files from Blob and upload to Sanity
+    if (blobUrls && blobUrls.length > 0) {
+      await Promise.all(
+        blobUrls.map(async (blobUrl) => {
+          // Fetch the file from Blob
+          const response = await fetch(blobUrl);
+          const buffer = await response.arrayBuffer();
+
+          // Upload to Sanity
+          const sanityAsset = await writeClient.assets.upload(
+            "image",
+            Buffer.from(buffer),
+            {
+              filename: blobUrl.split("/").pop(),
+            },
+          );
 
           uploadedAssets.push({
             _key: randomUUID(),
             _type: "asset",
             asset: {
               _type: "reference",
-              _ref: asset._id,
+              _ref: sanityAsset._id,
             },
           });
-
-          uploadedAssetUrls.push(asset.url);
-        }
-      }
+          uploadedAssetsUrls.push(sanityAsset.url);
+        }),
+      );
     }
 
-    let inquiry;
-    try {
-      inquiry = await writeClient.create({
-        _type: "inquiry",
-        fullName,
-        email,
-        phone,
-        eventType,
-        eventDate: eventDate.toISOString().split("T")[0], // YYYY-MM-DD
-        budget: budget.toString(),
-        dreamDress,
-        inspirationPhotos: uploadedAssets,
-        status: "pending",
-      });
-    } catch (error) {
-      return {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to submit inquiry",
-      };
+    // 2.  Create inquiry document in Sanity
+    const inquiry = await writeClient.create({
+      _type: "inquiry",
+      fullName,
+      email,
+      phone,
+      eventType,
+      eventDate: eventDate.toISOString().split("T")[0], // YYYY-MM-DD
+      budget: budget.toString(),
+      dreamDress,
+      inspirationPhotos: uploadedAssets,
+      status: "pending",
+    });
+
+    // 3. Delete files from Vercel Blob if inquiry has been created
+    if (inquiry._id) {
+      await Promise.all(blobUrls.map((url) => del(url)));
     }
 
-    const inquiryId = inquiry._id;
-
-    // 5. Format date for email display
+    // 4. Format date for email display
     const eventTypeLabel = EVENT_TYPES_KEYS[eventType] || eventType;
     const eventDateFormatted = new Date(eventDate).toLocaleDateString("en-US", {
       weekday: "long",
@@ -110,7 +101,7 @@ export async function submitInquiryForm(formData: FormData) {
 
     const { error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
-      to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
+      to: siteConfig.supportEmail,
       subject: `New Custom Order Enquiry: ${fullName}`,
       react: AdminInquiryEmail({
         fullName,
@@ -120,8 +111,8 @@ export async function submitInquiryForm(formData: FormData) {
         eventDate: eventDateFormatted,
         budget,
         dreamDress,
-        inspirationPhotos: uploadedAssetUrls,
-        inquiryId,
+        inspirationPhotos: uploadedAssetsUrls,
+        inquiryId: inquiry._id,
         socialHandles,
       }),
     });

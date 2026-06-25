@@ -104,7 +104,7 @@ export function Lightbox({
 
             <div className="absolute right-0 -bottom-20 left-0 text-center">
               {title && (
-                <h2 className="text-background font-serif text-xl md:text-3xl">
+                <h2 className="text-background font-sans text-xl md:text-2xl">
                   {title}
                 </h2>
               )}

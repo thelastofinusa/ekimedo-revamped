@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isValidPhoneNumber } from "libphonenumber-js";
 
 export const MAX_FILES_UPLOAD = 4;
-export const MAX_SIZE_UPLOAD = 2 * 1024 * 1024; // 1MB
+export const MAX_SIZE_UPLOAD = 1.5 * 1024 * 1024; // 1MB
 
 export const MIN_TEXTAREA_LENGTH = 5;
 export const MAX_TEXTAREA_LENGTH = 150;
@@ -66,7 +66,7 @@ export const zSchema = {
     eventDate: z.date({
       error: "Please select an event date",
     }),
-    budget: z.number({ message: "Estimated budget is required" }).int(),
+    budget: z.number({ message: "Estimated budget is required" }),
     inspirationPhotos: z
       .array(z.instanceof(File))
       .min(1, "Please select at least one inspiration photo")
@@ -78,7 +78,10 @@ export const zSchema = {
     dreamDress: z
       .string()
       .trim()
-      .min(20, "Please describe your dream dress in at least 20 characters")
+      .min(
+        MIN_TEXTAREA_LENGTH,
+        `Please describe your dream dress in at least ${MIN_TEXTAREA_LENGTH} characters`,
+      )
       .max(2000, "Description must be less than 2000 characters"),
   }),
   review: z

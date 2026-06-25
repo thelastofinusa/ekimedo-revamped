@@ -38,6 +38,7 @@ import {
   FileUploadItemDelete,
   FileUploadItemMetadata,
   FileUploadItemPreview,
+  FileUploadItemProgress,
   FileUploadList,
 } from "@/components/shadcn/file-upload";
 import { toast } from "sonner";
@@ -45,10 +46,9 @@ import { cn } from "@/lib/utils";
 import { ImagePlusIcon, XIcon } from "lucide-react";
 import { Textarea } from "@/components/shadcn/textarea";
 import { submitInquiryForm } from "@/actions/inquiry.action";
+import { useFileUpload } from "@/hooks/use-file-upload";
 
 export const SubmitForm = () => {
-  const [isSubmitting, startTransition] = React.useTransition();
-
   const form = useForm<ZSchemaType["inquiry"]>({
     resolver: zodResolver(zSchema.inquiry),
     defaultValues: {
@@ -58,49 +58,47 @@ export const SubmitForm = () => {
       eventType: "",
       eventDate: undefined,
       budget: undefined,
-      inspirationPhotos: [] as File[],
       dreamDress: "",
+      inspirationPhotos: [] as File[],
     },
   });
 
-  /**
-   * Handle file rejection
-   */
-  const onFileReject = React.useCallback((file: File, message: string) => {
-    const truncatedName =
-      file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name;
-    toast.warning(message, {
-      description: `"${truncatedName}" has been rejected`,
-      duration: 8000,
-    });
-  }, []);
+  const {
+    onFileUpload,
+    getFileKey,
+    setFileBlobMap,
+    isFileUploading,
+    fileBlobMap,
+    onFileReject,
+    handleFileValueChange,
+  } = useFileUpload({
+    getFiles: () => form.getValues("inspirationPhotos"),
+    setFiles: (files) =>
+      form.setValue("inspirationPhotos", files, { shouldValidate: true }),
+  });
 
+  const [isSubmitting, startTransition] = React.useTransition();
+
+  // ---- MODIFIED onSubmit: sends blob URLs instead of raw files ----
   async function onSubmit(values: ZSchemaType["inquiry"]) {
-    const formData = new FormData();
-
-    formData.append("fullName", values.fullName);
-    formData.append("email", values.email);
-    formData.append("phone", values.phone);
-    formData.append("eventType", values.eventType);
-    formData.append(
-      "eventDate",
-      values.eventDate ? values.eventDate.toISOString() : "",
-    );
-    formData.append("budget", String(values.budget));
-    formData.append("dreamDress", values.dreamDress);
-
-    if (values.inspirationPhotos) {
-      for (const file of values.inspirationPhotos) {
-        formData.append("inspirationPhotos", file);
-      }
+    // Prevent submission while uploads are still in progress
+    if (isFileUploading) {
+      toast.error("Please wait for file uploads to finish.");
+      return;
     }
 
-    toast.loading("Submitting inquiry. Please wait..", {
+    // Collect blob URLs from state
+    const inspirationUrls = values.inspirationPhotos
+      .map((file) => fileBlobMap[getFileKey(file)]?.url)
+      .filter(Boolean) as string[];
+
+    toast.loading("Submitting inquiry. Please wait...", {
       id: "submitting-inquiry",
     });
+
     startTransition(async () => {
       try {
-        const result = await submitInquiryForm(formData);
+        const result = await submitInquiryForm(values, inspirationUrls);
         if (!result.success) throw new Error(result.message);
 
         if (result.resendError) {
@@ -115,7 +113,9 @@ export const SubmitForm = () => {
             description: result.message,
           });
         }
+
         form.reset();
+        setFileBlobMap({});
       } catch (error) {
         console.error(error);
         toast.error("An unexpected error occurred", {
@@ -213,6 +213,7 @@ export const SubmitForm = () => {
                     <FormItem>
                       <FormLabel required>Event Type</FormLabel>
                       <Select
+                        value={field.value}
                         onValueChange={field.onChange}
                         disabled={isSubmitting}
                       >
@@ -275,9 +276,6 @@ export const SubmitForm = () => {
                           className="flex-1"
                           disabled={isSubmitting}
                           {...field}
-                          onChange={(e) =>
-                            field.onChange(e.target.valueAsNumber)
-                          }
                         />
                         <Link
                           href={isSubmitting ? "#" : "/pricing"}
@@ -297,6 +295,7 @@ export const SubmitForm = () => {
                 )}
               />
 
+              {/* Inspiration Photos – modified to use our custom onChange */}
               <FormField
                 control={form.control}
                 name="inspirationPhotos"
@@ -306,11 +305,12 @@ export const SubmitForm = () => {
                     <FormControl>
                       <FileUpload
                         value={field.value}
-                        onValueChange={field.onChange}
+                        onValueChange={handleFileValueChange}
                         accept="image/png,image/jpeg"
                         maxFiles={MAX_FILES_UPLOAD}
                         maxSize={MAX_SIZE_UPLOAD}
                         onFileReject={onFileReject}
+                        onUpload={onFileUpload}
                         multiple
                       >
                         <FileUploadDropzone
@@ -322,9 +322,9 @@ export const SubmitForm = () => {
                               : "",
                           )}
                         >
+                          {/* dropzone content unchanged */}
                           <div className="text-muted-foreground flex flex-col items-center gap-1 text-center">
                             <ImagePlusIcon className="size-8" />
-
                             <p className="mt-4 text-sm font-medium">
                               Drag & drop files here.
                             </p>
@@ -337,26 +337,28 @@ export const SubmitForm = () => {
                         </FileUploadDropzone>
                         <FileUploadList className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {field?.value?.map((file) => {
-                            const progressKey = `${file.name}-${file.size}`;
-
+                            const key = getFileKey(file); // use the stable key
                             return (
                               <FileUploadItem
-                                key={progressKey}
+                                key={key}
                                 value={file}
                                 className="flex-col relative group"
                               >
                                 <div className="flex w-full items-center gap-2">
                                   <FileUploadItemPreview />
                                   <FileUploadItemMetadata size="sm" />
+                                  <FileUploadItemProgress variant="fill" />
                                   {!isSubmitting && (
                                     <FileUploadItemDelete
                                       asChild
-                                      disabled={isSubmitting}
+                                      disabled={isSubmitting || isFileUploading}
                                     >
                                       <Button
                                         variant="destructive"
                                         size="icon-xs"
-                                        disabled={isSubmitting}
+                                        disabled={
+                                          isSubmitting || isFileUploading
+                                        }
                                         className="md:opacity-30 md:pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100"
                                       >
                                         <XIcon />
@@ -400,13 +402,13 @@ export const SubmitForm = () => {
                 }}
               />
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full"
                 size="xl"
                 isLoading={isSubmitting}
                 loadingText="Submitting..."
+                disabled={isFileUploading || isSubmitting}
               >
                 Submit Inquiry
               </Button>

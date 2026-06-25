@@ -19,6 +19,7 @@
     "@sanity/image-url": "2",
     "@sanity/vision": "5",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/blob": "^2.4.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

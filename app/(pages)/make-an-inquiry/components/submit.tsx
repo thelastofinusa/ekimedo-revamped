@@ -276,6 +276,9 @@ export const SubmitForm = () => {
                           className="flex-1"
                           disabled={isSubmitting}
                           {...field}
+                          onChange={(e) =>
+                            field.onChange(e.target.valueAsNumber)
+                          }
                         />
                         <Link
                           href={isSubmitting ? "#" : "/pricing"}

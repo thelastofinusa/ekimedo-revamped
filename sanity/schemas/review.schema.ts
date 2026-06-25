@@ -30,6 +30,12 @@ export const reviewType = defineType({
     }),
 
     defineField({
+      name: "email",
+      title: "Client Email",
+      type: "email",
+    }),
+
+    defineField({
       name: "service",
       title: "Service Offered",
       type: "string",

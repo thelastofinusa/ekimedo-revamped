@@ -15,7 +15,7 @@ export const CustomerInquiryEmail = (props: {
       socialHandles={props.socialHandles}
     >
       <Text className="text-sm leading-6 text-[#3c4043]">
-        Hi <strong>{props.fullName}</strong>,
+        Hello <strong>{props.fullName}</strong>,
       </Text>
 
       <Text className="mt-4 text-sm leading-6 text-[#3c4043]">

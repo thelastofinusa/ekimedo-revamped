@@ -60,7 +60,7 @@ export const CustomerOrderEmail = (props: {
                     alt={item.name}
                     width="70"
                     height="60"
-                    className="bg-secondary shadow-xs object-cover"
+                    className="bg-secondary object-cover"
                   />
                 </td>
 

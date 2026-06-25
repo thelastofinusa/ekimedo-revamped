@@ -1,5 +1,3 @@
-"use server";
-
 import { getResend } from "@/lib/resend";
 import { zSchema, ZSchemaType } from "@/lib/zod";
 import { client } from "@/sanity/lib/client";
@@ -8,15 +6,18 @@ import { AdminContactEmail } from "@/components/emails/admin/adminContact.email"
 
 export async function submitContactForm(formData: ZSchemaType["contact"]) {
   const resend = getResend();
-  const result = zSchema.contact.safeParse(formData);
+  const validation = zSchema.contact.safeParse(formData);
 
-  if (!result.success) {
+  if (!validation.success) {
     return {
       success: false,
-      message: result.error.message ?? "Missing or invalid required fields.",
-      details: result.error.flatten(),
+      message:
+        validation.error.message ?? "Missing or invalid required fields.",
+      details: validation.error.flatten(),
     };
   }
+
+  // const { fName,email,inquiryType,lName,message,phone,customField} = validation.data;
 
   try {
     const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);

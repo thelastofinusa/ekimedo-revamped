@@ -469,6 +469,7 @@ export type Testimonial = {
   _rev: string;
   status?: "pending" | "approved" | "denied";
   name?: string;
+  email?: string;
   service?: string;
   review?: string;
   rating?: number;
@@ -1209,6 +1210,15 @@ export type QUERY_REVIEW_PERMISSION_RESULT = {
   customerEmail?: string;
 } | null;
 
+// Source: sanity/queries/permission.query.ts
+// Variable: QUERY_REVIEW_PERMISSION_BY_ID
+// Query: *[_type == "permission" && _id == $id][0]{    _id,    customerName,    customerEmail  }
+export type QUERY_REVIEW_PERMISSION_BY_ID_RESULT = {
+  _id: string;
+  customerName: string | null;
+  customerEmail: string | null;
+} | null;
+
 // Source: sanity/queries/pricing.query.ts
 // Variable: QUERY_PRICING_TIERS
 // Query: *[_type == "pricingTier"] | order(order asc, _createdAt asc) {  _id,  name,  price,  description,  features}
@@ -1332,17 +1342,32 @@ export type QUERY_PRODUCT_BY_IDS_RESULT = Array<{
 
 // Source: sanity/queries/review.query.ts
 // Variable: QUERY_REVIEWS
-// Query: *[_type == "testimonial" && status == "approved"] | order(date desc) {    _id,    "avatar": avatar.asset->url,    service,    date,    name,    rating,    review,    "workAssets": workAssets[].asset->url}
+// Query: *[_type == "testimonial" && status == "approved"] | order(date desc) {    _id,    "avatar": avatar.asset->url,    service,    date,    name,    email,    rating,    review,    "workAssets": workAssets[].asset->url}
 export type QUERY_REVIEWS_RESULT = Array<{
   _id: string;
   avatar: string | null;
   service: string | null;
   date: string | null;
   name: string | null;
+  email: string | null;
   rating: number | null;
   review: string | null;
   workAssets: Array<string | null> | null;
 }>;
+
+// Source: sanity/queries/review.query.ts
+// Variable: QUERY_REVIEW_BY_ID
+// Query: *[_type == "testimonial" && _id == $id][0]{    _id,    name,    email,    service,    status,    rating,    review,    date  }
+export type QUERY_REVIEW_BY_ID_RESULT = {
+  _id: string;
+  name: string | null;
+  email: string | null;
+  service: string | null;
+  status: "approved" | "denied" | "pending" | null;
+  rating: number | null;
+  review: string | null;
+  date: string | null;
+} | null;
 
 // Source: sanity/queries/social.query.ts
 // Variable: QUERY_SOCIAL_HANDLES
@@ -1379,12 +1404,14 @@ declare module "@sanity/client" {
     '*[\n  _type == "order"\n  && stripePaymentId == $stripePaymentId\n][0]{\n  _id,\n  orderNumber,\n  emailSent {\n    admin,\n    customer\n  }\n}': QUERY_ORDER_BY_STRIPE_PAYMENT_ID_RESULT;
     '*[\n  _type == "order"\n  && stripeSessionId == $sessionId\n][0] {\n  _id,\n  orderNumber,\n  emailSent {\n    admin,\n    customer\n  }\n}': QUERY_ORDER_BY_STRIPE_SESSION_ID_RESULT;
     '*[_type == "permission" && lower(customerEmail) == lower($email)][0]': QUERY_REVIEW_PERMISSION_RESULT;
+    '\n  *[_type == "permission" && _id == $id][0]{\n    _id,\n    customerName,\n    customerEmail\n  }\n': QUERY_REVIEW_PERMISSION_BY_ID_RESULT;
     '\n*[_type == "pricingTier"] | order(order asc, _createdAt asc) {\n  _id,\n  name,\n  price,\n  description,\n  features\n}\n': QUERY_PRICING_TIERS_RESULT;
     '\n    *[_type == "bookingProcess"] | order(order asc, _createdAt asc) {\n        _id,\n        title,\n        description,\n        icon,\n        order,\n    }\n': QUERY_BOOKING_PROCESS_RESULT;
     '\n*[_type == "product"] | order(_createdAt desc) {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    delivery,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': QUERY_PRODUCT_RESULT;
     '\n*[_type == "product" && slug.current == $slug] | order(_createdAt desc)[0] {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    delivery,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': QUERY_PRODUCT_BY_SLUG_RESULT;
     '\n*[_type == "product" && _id in $ids] | order(_createdAt desc) {\n    _id,\n    name,\n    "slug": slug.current,\n    price,\n    colors[]->{name, "value": value.hex},\n    description,\n    "snapshots": snapshots[]{\n      _type,\n      "url": asset->url\n    },\n    sizes,\n    stock,\n    delivery,\n    category -> {\n        _id,\n        name,\n        "slug": slug.current\n    },\n}\n': QUERY_PRODUCT_BY_IDS_RESULT;
-    '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': QUERY_REVIEWS_RESULT;
+    '\n*[_type == "testimonial" && status == "approved"] | order(date desc) {\n    _id,\n    "avatar": avatar.asset->url,\n    service,\n    date,\n    name,\n    email,\n    rating,\n    review,\n    "workAssets": workAssets[].asset->url\n}\n': QUERY_REVIEWS_RESULT;
+    '\n  *[_type == "testimonial" && _id == $id][0]{\n    _id,\n    name,\n    email,\n    service,\n    status,\n    rating,\n    review,\n    date\n  }\n': QUERY_REVIEW_BY_ID_RESULT;
     '\n    *[_type == "social"] | order(_createdAt desc) {\n        _id,\n        name,\n        url,\n        icon\n    }\n': QUERY_SOCIAL_HANDLES_RESULT;
   }
 }

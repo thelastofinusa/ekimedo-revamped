@@ -300,7 +300,7 @@ export const Header = () => {
                             labelIcon={
                               <PiNewspaper className="text-foreground mt-0.5 size-3.5" />
                             }
-                            href="/reviews/new"
+                            href="/reviews/submit"
                           />
                         )}
 

@@ -88,7 +88,7 @@ export const SubmitForm = () => {
     }
 
     // Collect blob URLs from state
-    const inspirationUrls = values.inspirationPhotos
+    const fileUrls = values.inspirationPhotos
       .map((file) => fileBlobMap[getFileKey(file)]?.url)
       .filter(Boolean) as string[];
 
@@ -98,7 +98,7 @@ export const SubmitForm = () => {
 
     startTransition(async () => {
       try {
-        const result = await submitInquiryForm(values, inspirationUrls);
+        const result = await submitInquiryForm(values, fileUrls);
         if (!result.success) throw new Error(result.message);
 
         if (result.resendError) {

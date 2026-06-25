@@ -1,86 +1,93 @@
 "use server";
+
+import { AdminReviewEmail } from "@/components/emails/admin/adminReview.email";
 import { getResend } from "@/lib/resend";
+import { zSchema, ZSchemaType } from "@/lib/zod";
 import { client, writeClient } from "@/sanity/lib/client";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
-import { zSchema } from "@/lib/zod";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { randomUUID } from "crypto";
-import { AdminReviewEmail } from "@/components/emails/admin/adminReview.email";
 
-/**
- * Server action to submit a review
- * @param formData - The review form data
- */
-export async function submitReviewForm(formData: FormData) {
-  // Authenticate user
+export async function submitReviewForm(
+  formData: ZSchemaType["review"],
+  blobUrls?: string[],
+) {
   const { userId } = await auth();
   const user = await currentUser();
-  if (!userId || !user) {
-    throw new Error("Unauthorized");
-  }
+  if (!userId || !user) throw new Error("Unauthorized");
 
   const resend = getResend();
+  const validation = zSchema.review.safeParse(formData);
 
-  const review = formData.get("review") as string;
-  const rating = formData.get("rating") as string;
-  const serviceRaw = formData.get("service") as string;
-  const customField = formData.get("customField") as string | null;
-  const workAssets = formData.getAll("workAssets") as File[];
-
-  const service = serviceRaw === "custom" ? customField?.trim() : serviceRaw;
-
-  // Validate form data
-  const validationResult = zSchema.review.safeParse({
-    review,
-    rating,
-    service,
-    workAssets,
-    customField,
-  });
-  if (!validationResult.success) {
+  if (!validation.success) {
     return {
       success: false,
       message:
-        validationResult.error.message ?? "Missing or invalid required fields.",
-      details: validationResult.error.flatten(),
+        validation.error.message ?? "Missing or invalid required fields.",
+      details: validation.error.flatten(),
     };
   }
 
+  const {
+    rating,
+    review,
+    service: serviceRaw,
+    customField,
+    workAssets,
+  } = validation.data;
+  const service = serviceRaw === "custom" ? customField?.trim() : serviceRaw;
+
   try {
-    const uploadedAssets = [];
-    const uploadedAssetUrls: string[] = [];
+    const uploadedAssets: {
+      _key: string;
+      _type: string;
+      asset: {
+        _type: string;
+        _ref: string;
+      };
+    }[] = [];
+    const uploadedAssetsUrls: string[] = [];
 
-    if (workAssets && workAssets.length > 0) {
-      for (const image of workAssets) {
-        if (image.size > 0) {
-          const arrayBuffer = await image.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+    if (
+      workAssets &&
+      workAssets.length > 0 &&
+      blobUrls &&
+      blobUrls.length > 0
+    ) {
+      await Promise.all(
+        blobUrls.map(async (blobUrl) => {
+          // Fetch the file from Blob
+          const response = await fetch(blobUrl);
+          const buffer = await response.arrayBuffer();
 
-          const asset = await writeClient.assets.upload("image", buffer, {
-            filename: image.name,
-          });
+          // Upload to Sanity
+          const sanityAsset = await writeClient.assets.upload(
+            "image",
+            Buffer.from(buffer),
+            {
+              filename: blobUrl.split("/").pop(),
+            },
+          );
 
           uploadedAssets.push({
             _key: randomUUID(),
             _type: "asset",
             asset: {
               _type: "reference",
-              _ref: asset._id,
+              _ref: sanityAsset._id,
             },
           });
-
-          uploadedAssetUrls.push(asset.url);
-        }
-      }
+          uploadedAssetsUrls.push(sanityAsset.url);
+        }),
+      );
     }
 
-    // at the top, add a fetch
     let avatarAsset = null;
-
     if (user.imageUrl) {
       try {
         const response = await fetch(user.imageUrl);
         if (!response.ok) throw new Error("Failed to fetch avatar");
+
         const arrayBuffer = await response.arrayBuffer();
         avatarAsset = await writeClient.assets.upload(
           "image",
@@ -89,8 +96,8 @@ export async function submitReviewForm(formData: FormData) {
             filename: `avatar-${user.id}.jpg`,
           },
         );
-      } catch (err) {
-        console.warn("Failed to upload Clerk avatar, skipping.", err);
+      } catch (error) {
+        console.warn("Failed to upload Clerk avatar, skipping.", error);
       }
     }
 
@@ -100,8 +107,9 @@ export async function submitReviewForm(formData: FormData) {
       _type: "testimonial",
       status: "pending",
       name: clientName,
+      email: user.primaryEmailAddress?.emailAddress || user.emailAddresses[0],
       review,
-      rating,
+      rating: Number(rating),
       date: new Date().toISOString(),
       service,
       avatar: avatarAsset
@@ -127,7 +135,7 @@ export async function submitReviewForm(formData: FormData) {
         rating: Number(updatedReview.rating),
         testimonialId: updatedReview._id,
         review: updatedReview.review,
-        images: uploadedAssetUrls,
+        images: uploadedAssetsUrls,
         socialHandles: socialHandles,
       }),
     });

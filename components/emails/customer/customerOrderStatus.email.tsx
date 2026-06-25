@@ -57,9 +57,12 @@ export const CustomerOrderStatusEmail = (props: {
       title={content.title}
       socialHandles={props.socialHandles}
     >
-      <Text className="text-sm leading-6 ">
-        Hello <strong>{props.customerName}</strong>, This is an update regarding
-        your order{" "}
+      <Text className="text-sm leading-6">
+        Hello <strong>{props.customerName}</strong>,
+      </Text>
+
+      <Text className="mt-4 text-sm leading-6 text-[#3c4043]">
+        This is an update regarding your order{" "}
         <Link
           href={`${props.ordersUrl}/${props.orderId}`}
           className="text-primary underline"

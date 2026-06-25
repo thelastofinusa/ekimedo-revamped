@@ -7,6 +7,7 @@ import {
   FileUploadItemDelete,
   FileUploadItemMetadata,
   FileUploadItemPreview,
+  FileUploadItemProgress,
   FileUploadList,
 } from "@/components/shadcn/file-upload";
 import {
@@ -49,6 +50,7 @@ import { ImagePlusIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { submitReviewForm } from "@/actions/review.action";
 
 /**
@@ -64,9 +66,6 @@ export const SubmitForm: React.FC<{
     user?.emailAddresses?.[0]?.emailAddress;
 
   // UI states
-  const [isSubmitting, startTransition] = React.useTransition();
-  const [isCustomSelected, setIsCustomSelected] = React.useState(false);
-  const [hasPermission, setHasPermission] = React.useState(true);
 
   // Form setup
   const form = useForm<ZSchemaType["review"]>({
@@ -76,9 +75,27 @@ export const SubmitForm: React.FC<{
       rating: "",
       service: "",
       customField: "",
-      workAssets: [],
+      workAssets: [] as File[],
     },
   });
+
+  const {
+    onFileUpload,
+    getFileKey,
+    setFileBlobMap,
+    isFileUploading,
+    fileBlobMap,
+    onFileReject,
+    handleFileValueChange,
+  } = useFileUpload({
+    getFiles: () => form.getValues("workAssets")!,
+    setFiles: (files) =>
+      form.setValue("workAssets", files, { shouldValidate: true }),
+  });
+
+  const [isSubmitting, startTransition] = React.useTransition();
+  const [isCustomSelected, setIsCustomSelected] = React.useState(false);
+  const [hasPermission, setHasPermission] = React.useState(true);
 
   /**
    * Toggle custom service input
@@ -107,18 +124,6 @@ export const SubmitForm: React.FC<{
     checkPermission();
   }, [customerEmail]);
 
-  /**
-   * Handle file rejection
-   */
-  const onFileReject = React.useCallback((file: File, message: string) => {
-    const truncatedName =
-      file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name;
-    toast.warning(message, {
-      description: `"${truncatedName}" has been rejected`,
-      duration: 8000,
-    });
-  }, []);
-
   async function onSubmit(values: ZSchemaType["review"]) {
     if (!hasPermission) {
       toast.info("Permission needed!", {
@@ -127,25 +132,20 @@ export const SubmitForm: React.FC<{
       return;
     }
 
-    const formData = new FormData();
-
-    formData.append("review", values.review);
-    formData.append("customField", String(values.customField));
-    formData.append("service", String(values.service));
-    formData.append("rating", String(values.rating));
-
-    values.workAssets?.forEach((file) => {
-      formData.append("workAssets", file);
-    });
-
-    if (!validateFormSizeOrWarn({ formData })) return;
+    let fileUrls: string[];
+    if (values.workAssets && values.workAssets.length > 0) {
+      // Collect blob URLs from state
+      fileUrls = values.workAssets
+        .map((file) => fileBlobMap[getFileKey(file)]?.url)
+        .filter(Boolean) as string[];
+    }
 
     toast.loading("Submitting review. Please wait..", {
       id: "submitting-review",
     });
     startTransition(async () => {
       try {
-        const result = await submitReviewForm(formData);
+        const result = await submitReviewForm(values, fileUrls);
         if (!result.success) throw new Error(result.message);
 
         if (result.resendError) {
@@ -161,6 +161,7 @@ export const SubmitForm: React.FC<{
           });
         }
         form.reset();
+        setFileBlobMap({});
       } catch (error) {
         console.error(error);
         toast.error("An unexpected error occurred", {
@@ -360,11 +361,12 @@ export const SubmitForm: React.FC<{
                           <FormControl>
                             <FileUpload
                               value={field.value}
-                              onValueChange={field.onChange}
+                              onValueChange={handleFileValueChange}
                               accept="image/png,image/jpeg"
                               maxFiles={MAX_FILES_UPLOAD}
                               maxSize={MAX_SIZE_UPLOAD}
                               onFileReject={onFileReject}
+                              onUpload={onFileUpload}
                               multiple
                             >
                               <FileUploadDropzone
@@ -376,9 +378,9 @@ export const SubmitForm: React.FC<{
                                     : "",
                                 )}
                               >
+                                {/* dropzone content unchanged */}
                                 <div className="text-muted-foreground flex flex-col items-center gap-1 text-center">
                                   <ImagePlusIcon className="size-8" />
-
                                   <p className="mt-4 text-sm font-medium">
                                     Drag & drop files here.
                                   </p>
@@ -392,26 +394,30 @@ export const SubmitForm: React.FC<{
                               </FileUploadDropzone>
                               <FileUploadList className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {field?.value?.map((file) => {
-                                  const progressKey = `${file.name}-${file.size}`;
-
+                                  const key = getFileKey(file); // use the stable key
                                   return (
                                     <FileUploadItem
-                                      key={progressKey}
+                                      key={key}
                                       value={file}
                                       className="flex-col relative group"
                                     >
                                       <div className="flex w-full items-center gap-2">
                                         <FileUploadItemPreview />
                                         <FileUploadItemMetadata size="sm" />
+                                        <FileUploadItemProgress variant="fill" />
                                         {!isSubmitting && (
                                           <FileUploadItemDelete
                                             asChild
-                                            disabled={isSubmitting}
+                                            disabled={
+                                              isSubmitting || isFileUploading
+                                            }
                                           >
                                             <Button
                                               variant="destructive"
                                               size="icon-xs"
-                                              disabled={isSubmitting}
+                                              disabled={
+                                                isSubmitting || isFileUploading
+                                              }
                                               className="md:opacity-30 md:pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100"
                                             >
                                               <XIcon />

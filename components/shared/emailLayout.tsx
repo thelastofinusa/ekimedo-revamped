@@ -48,12 +48,14 @@ export function EmailLayout({
 
           <Container className="mx-auto my-5 overflow-hidden">
             <Section className="px-3">
-              <Img
-                src="https://res.cloudinary.com/dbc3ctobv/image/upload/v1781974490/horizontal-charcoal_qqtcdk.svg"
-                width="130"
-                height="auto"
-                alt={`${siteConfig.title}'s Logo`}
-              />
+              <Link href={siteConfig.url}>
+                <Img
+                  src="https://res.cloudinary.com/dbc3ctobv/image/upload/v1781974490/horizontal-charcoal_qqtcdk.svg"
+                  width="130"
+                  height="auto"
+                  alt={`${siteConfig.title}'s Logo`}
+                />
+              </Link>
             </Section>
 
             <Section className="px-3">

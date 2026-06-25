@@ -121,4 +121,66 @@ const SanityOrderStatusAction: DocumentActionComponent = (
   };
 };
 
-export { SanityInquiryAction, SanityOrderStatusAction };
+const SanityReviewPermissionAction: DocumentActionComponent = (
+  props: DocumentActionProps,
+) => {
+  const toast = useToast();
+  const { id } = props;
+
+  // const { delete: deleteOperation } = useDocumentOperation(id, props.type);
+
+  const [loading, setLoading] = React.useState(false);
+
+  const onHandle = async () => {
+    if (loading) return;
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/sanity/actions/review-permission", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          actionId: id,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok)
+        throw new Error(data.error || "Failed to send review invitation");
+
+      toast.push({
+        status: "success",
+        title: "Review invitation sent",
+        description:
+          "The customer has been granted permission to submit a testimonial.",
+      });
+
+      // Remove permission record after successful email
+      // deleteOperation.execute();
+    } catch (error) {
+      toast.push({
+        status: "error",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    label: loading ? "Sending..." : "Send Review Invitation",
+    onHandle,
+    tone: "primary",
+    disabled: loading,
+  };
+};
+
+export {
+  SanityInquiryAction,
+  SanityOrderStatusAction,
+  SanityReviewPermissionAction,
+};

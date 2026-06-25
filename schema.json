@@ -2668,6 +2668,13 @@
         },
         "optional": true
       },
+      "email": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
+      },
       "service": {
         "type": "objectAttribute",
         "value": {

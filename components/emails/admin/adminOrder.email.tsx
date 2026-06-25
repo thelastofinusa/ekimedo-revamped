@@ -71,7 +71,7 @@ export const AdminOrderEmail = (props: {
                     alt={item.name}
                     width="70"
                     height="60"
-                    className="object-cover shadow-xs bg-secondary"
+                    className="object-cover bg-secondary"
                   />
                 </td>
 

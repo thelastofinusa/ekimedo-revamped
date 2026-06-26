@@ -12,14 +12,14 @@ const cartItemSchema = z.object({
     productId: z.string(),
     name: z.string(),
     price: z.number(),
-    quantity: z.number(),
+    quantity: z.number().int().positive().max(20),
     image: z.string(),
     selectedSize: z.string(),
     selectedColor: z.string(),
   }),
   createSessionSchema = z.object({
-    items: z.array(cartItemSchema),
-    paymentMethod: z.string().optional(),
+    items: z.array(cartItemSchema).min(1).max(50),
+    paymentMethod: z.enum(["card", "stripe", "paypal"]).optional(),
   });
 
 export const zSchema = {
@@ -50,6 +50,7 @@ export const zSchema = {
         MAX_TEXTAREA_LENGTH,
         `At least ${MAX_TEXTAREA_LENGTH} characters long`,
       ),
+    captchaToken: z.string().optional(),
   }),
   inquiry: z.object({
     fullName: z
@@ -83,6 +84,7 @@ export const zSchema = {
         `Please describe your dream dress in at least ${MIN_TEXTAREA_LENGTH} characters`,
       )
       .max(2000, "Description must be less than 2000 characters"),
+    captchaToken: z.string().optional(),
   }),
   review: z
     .object({
@@ -111,6 +113,7 @@ export const zSchema = {
           },
         )
         .optional(),
+      captchaToken: z.string().optional(),
     })
     .refine(
       (data) =>

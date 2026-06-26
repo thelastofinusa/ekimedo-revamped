@@ -209,13 +209,22 @@ export const SubmitForm: React.FC<{
         toast.loading("Processing payment. Please wait..", { id: "booking" });
         const result = await bookConsultation(payload);
         toast.dismiss("booking");
-        if (result.success && result.url) {
-          window.location.href = result.url;
-          if (paymentStatus === "success") {
-            localStorage.removeItem(`booking-form-${consultation?.slug}`);
-            form.reset();
+
+        if (result.success) {
+          // Success path – payment session created
+          if (result.url) {
+            window.location.href = result.url;
+            // Clear saved form data only after successful redirect
+            if (paymentStatus === "success") {
+              localStorage.removeItem(`booking-form-${consultation?.slug}`);
+              form.reset();
+            }
+          } else {
+            // This case should rarely happen, but handle it gracefully
+            toast.error("Booking created but no payment URL was returned.");
           }
         } else {
+          // Failure path – result.message is guaranteed to exist
           toast.error("Failed to create booking", {
             description: result.message || "Please try again.",
             duration: Infinity,
@@ -266,7 +275,7 @@ export const SubmitForm: React.FC<{
             >
               <div className="columns-1 gap-4 space-y-4 md:columns-2 md:gap-5">
                 {Array.isArray(consultation?.formCards) &&
-                consultation?.formCards.length > 0 ? (
+                  consultation?.formCards.length > 0 ? (
                   consultation?.formCards.map((item, index) => {
                     if (!Array.isArray(item.fields) || item.fields.length < 1)
                       return null;
@@ -396,9 +405,9 @@ const renderFieldsWithGroups = (
   fields?.forEach((field) =>
     field.group
       ? (() => {
-          groups[field.group] ??= [];
-          groups[field.group].push(field);
-        })()
+        groups[field.group] ??= [];
+        groups[field.group].push(field);
+      })()
       : standalone.push(field),
   );
 
@@ -413,8 +422,8 @@ const renderFieldsWithGroups = (
             const data = f as {
               label: string;
               description?:
-                | string
-                | { path: string; value: string; newTab?: boolean };
+              | string
+              | { path: string; value: string; newTab?: boolean };
             } & SchemaFormField;
 
             return (
@@ -468,8 +477,8 @@ const renderFieldsWithGroups = (
         const data = f as {
           label: string;
           description?:
-            | string
-            | { path: string; value: string; newTab?: boolean };
+          | string
+          | { path: string; value: string; newTab?: boolean };
         } & SchemaFormField;
 
         return (

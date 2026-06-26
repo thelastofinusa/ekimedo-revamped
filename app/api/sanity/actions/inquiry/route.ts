@@ -5,9 +5,17 @@ import { client, writeClient } from "@/sanity/lib/client";
 import { QUERY_INQUIRY_BY_ID } from "@/sanity/queries/inquiry.query";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  enforceRateLimit,
+  SecurityError,
+  verifySanityActionRequest,
+} from "@/lib/security";
 
 export async function POST(request: NextRequest) {
   try {
+    verifySanityActionRequest(request);
+    await enforceRateLimit("sanity-action-inquiry", 30, 60_000);
+
     const resend = getResend();
     const { actionId } = await request.json();
     if (!actionId)
@@ -44,6 +52,9 @@ export async function POST(request: NextRequest) {
       status: "confirmed",
     });
   } catch (error) {
+    if (error instanceof SecurityError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Error performing action:", error);
     return NextResponse.json(
       {

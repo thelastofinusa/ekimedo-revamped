@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
@@ -16,7 +15,13 @@ import { CustomerBookingEmail } from "@/components/emails/customer/customerBooki
 import { AdminBookingEmail } from "@/components/emails/admin/adminBooking.email";
 import { QUERY_BOOKING_BY_ID } from "@/sanity/queries/booking.query";
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+if (!webhookSecret && process.env.NODE_ENV === "production") {
+  console.error(
+    "CRITICAL: STRIPE_WEBHOOK_SECRET is not set. Webhook verification will fail.",
+  );
+}
 
 interface OrderItemInput {
   productId: string;
@@ -24,21 +29,28 @@ interface OrderItemInput {
   priceAtPurchase: number;
 }
 
+interface StripeAddress {
+  name?: string | null;
+  line1?: string | null;
+  line2?: string | null;
+  city?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+}
+
+interface CleanAddress {
+  name?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  postcode?: string;
+  country?: string;
+}
+
 // Helper to clean address (remove null/undefined and empty strings)
-const cleanAddress = (
-  address: any,
-):
-  | {
-      name?: string;
-      line1?: string;
-      line2?: string;
-      city?: string;
-      postcode?: string;
-      country?: string;
-    }
-  | undefined => {
+const cleanAddress = (address: StripeAddress | null | undefined): CleanAddress | undefined => {
   if (!address) return undefined;
-  const cleaned: any = {};
+  const cleaned: CleanAddress = {};
   if (address.name) cleaned.name = address.name;
   if (address.line1) cleaned.line1 = address.line1;
   if (address.line2) cleaned.line2 = address.line2;
@@ -57,6 +69,13 @@ export async function POST(req: NextRequest) {
   const resend = getResend();
 
   try {
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET is not configured.");
+      return NextResponse.json(
+        { error: "Webhook secret not configured" },
+        { status: 500 },
+      );
+    }
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Invalid signature";
@@ -90,8 +109,12 @@ export async function POST(req: NextRequest) {
     const bookingId = metadata.bookingId;
 
     // Idempotency: check if booking already marked as paid
-    const existingBooking = await client.fetch(
-      `*[_type == "booking" && _id == $id][0]{ _id, status }`,
+    const existingBooking = await client.fetch<{
+      _id: string;
+      _rev: string;
+      status: string;
+    } | null>(
+      `*[_type == "booking" && _id == $id][0]{ _id, _rev, status }`,
       { id: bookingId },
     );
 
@@ -105,11 +128,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    // Update booking status to 'paid'
+    // Update booking status to 'paid' with revision check for idempotency
     try {
-      await writeClient.patch(bookingId).set({ status: "paid" }).commit();
+      await writeClient
+        .patch(bookingId)
+        .ifRevisionId(existingBooking._rev)
+        .set({ status: "paid" })
+        .commit();
       console.log(`Booking ${bookingId} marked as paid via webhook.`);
     } catch (error) {
+      // If revision mismatch, another webhook already updated it
+      const patchError = error as { statusCode?: number };
+      if (patchError.statusCode === 409) {
+        console.log(
+          `Booking ${bookingId} was already updated by another webhook (revision conflict), skipping.`,
+        );
+        return NextResponse.json({ received: true });
+      }
       console.error(`Failed to update booking ${bookingId}:`, error);
       return NextResponse.json(
         { error: "Failed to update booking" },
@@ -349,9 +384,10 @@ export async function POST(req: NextRequest) {
     // Atomically create order and decrement stock
     await createOrderAndDecrementStock(orderData, orderItemsInput);
     console.log(`Order ${orderId} created and stock decremented via webhook`);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If duplicate (409), it's a race condition – order already exists
-    if (error.statusCode === 409) {
+    const orderError = error as { statusCode?: number; message?: string };
+    if (orderError.statusCode === 409) {
       console.log(
         `Order ${orderId} already existed (race condition), ignoring.`,
       );
@@ -360,7 +396,7 @@ export async function POST(req: NextRequest) {
     // For other errors, rethrow to let Stripe retry
     console.error("Transaction failed:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to create order" },
+      { error: orderError.message || "Failed to create order" },
       { status: 500 },
     );
   }

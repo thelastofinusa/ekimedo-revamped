@@ -1,6 +1,34 @@
 import type { NextConfig } from "next";
 import { MAX_SERVER_BODY_SIZE_MB } from "./constants/keys";
 
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https://cdn.sanity.io https://img.clerk.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "connect-src 'self' https://cdn.sanity.io https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.stripe.com",
+      "frame-src https://challenges.cloudflare.com https://*.stripe.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join("; "),
+  },
+];
+
 const nextConfig: NextConfig = {
   typedRoutes: true,
   experimental: {
@@ -10,8 +38,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: MAX_SERVER_BODY_SIZE_MB,
     },
   },
+  headers: async () => [
+    {
+      // Apply security headers to all routes
+      source: "/(.*)",
+      headers: securityHeaders,
+    },
+  ],
   images: {
-    unoptimized: true,
+    // Only disable optimization in development; enable in production
+    unoptimized: process.env.NODE_ENV === "development",
     qualities: [100, 70],
     formats: ["image/webp", "image/avif"],
     remotePatterns: [
@@ -25,3 +61,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+

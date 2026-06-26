@@ -6,9 +6,17 @@ import { OrderStatusValue } from "@/constants/order";
 import { getResend } from "@/lib/resend";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
 import { CustomerOrderStatusEmail } from "@/components/emails/customer/customerOrderStatus.email";
+import {
+  enforceRateLimit,
+  SecurityError,
+  verifySanityActionRequest,
+} from "@/lib/security";
 
 export async function POST(request: NextRequest) {
   try {
+    verifySanityActionRequest(request);
+    await enforceRateLimit("sanity-action-order-status", 30, 60_000);
+
     const resend = getResend();
     const { actionId } = await request.json();
     if (!actionId)
@@ -46,6 +54,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof SecurityError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Error performing action:", error);
     return NextResponse.json(
       {

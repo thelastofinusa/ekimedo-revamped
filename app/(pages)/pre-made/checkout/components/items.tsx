@@ -78,10 +78,14 @@ export const CheckoutItems = () => {
 
         // 3. Call the Server Action
         const result = await createCheckoutSession(formData);
-        if (result.success && result.url) {
-          router.push(result.url as Route);
+        if (result.success) {
+          if (result.url) {
+            router.push(result.url as Route);
+          } else {
+            throw new Error("Checkout succeeded but no URL was returned.");
+          }
         } else {
-          throw new Error(result.message);
+          throw new Error(result.message || "Please try again");
         }
       } catch (err) {
         console.error(err);
@@ -191,101 +195,101 @@ export const CheckoutItems = () => {
               <div className="divide-y">
                 {isLoading
                   ? Array.from({ length: 2 }).map((_, idx) => (
-                      <div key={idx} className="flex gap-4 p-6">
-                        <Skeleton className="h-24 w-24 rounded-lg shrink-0" />
-                        <div className="flex flex-1 flex-col justify-between pt-1">
-                          <div className="space-y-2">
-                            <Skeleton className="h-5 w-2/3" />
-                            <Skeleton className="h-4 w-1/3" />
-                          </div>
-                          <Skeleton className="h-5 w-20" />
+                    <div key={idx} className="flex gap-4 p-6">
+                      <Skeleton className="h-24 w-24 rounded-lg shrink-0" />
+                      <div className="flex flex-1 flex-col justify-between pt-1">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-2/3" />
+                          <Skeleton className="h-4 w-1/3" />
                         </div>
+                        <Skeleton className="h-5 w-20" />
                       </div>
-                    ))
+                    </div>
+                  ))
                   : items.map((item) => {
-                      const stockInfo = stockMap.get(item.productId);
-                      const hasIssue =
-                        stockInfo?.isOutOfStock || stockInfo?.exceedsStock;
+                    const stockInfo = stockMap.get(item.productId);
+                    const hasIssue =
+                      stockInfo?.isOutOfStock || stockInfo?.exceedsStock;
 
-                      return (
-                        <div
-                          key={item.itemId}
-                          className={cn(
-                            "flex gap-4 p-6 transition-colors hover:bg-muted/10",
-                            hasIssue && "bg-red-50/50 dark:bg-red-950/20",
+                    return (
+                      <div
+                        key={item.itemId}
+                        className={cn(
+                          "flex gap-4 p-6 transition-colors hover:bg-muted/10",
+                          hasIssue && "bg-red-50/50 dark:bg-red-950/20",
+                        )}
+                      >
+                        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800 border">
+                          {item.image ? (
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                              sizes="96px"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                              No image
+                            </div>
                           )}
-                        >
-                          <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800 border">
-                            {item.image ? (
-                              <Image
-                                src={item.image}
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                                sizes="96px"
-                              />
-                            ) : (
-                              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                                No image
-                              </div>
+                        </div>
+
+                        <div className="flex flex-1 flex-col justify-between sm:flex-row sm:gap-4">
+                          <div className="flex flex-col gap-1.5">
+                            <p className="font-medium text-foreground line-clamp-1">
+                              {item.name}
+                            </p>
+
+                            {(item.selectedSize || item.selectedColor) && (
+                              <p className="text-muted-foreground text-xs font-medium">
+                                {item.selectedSize && (
+                                  <span>Size: {item.selectedSize}</span>
+                                )}
+                                {item.selectedSize && item.selectedColor && (
+                                  <span className="mx-2 text-border">|</span>
+                                )}
+                                {item.selectedColor && (
+                                  <span>Color: {item.selectedColor}</span>
+                                )}
+                              </p>
+                            )}
+
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Qty:{" "}
+                              <span className="font-medium text-foreground">
+                                {item.quantity}
+                              </span>
+                            </p>
+
+                            {/* Error States */}
+                            {stockInfo?.isOutOfStock && (
+                              <p className="text-xs font-semibold text-destructive mt-1">
+                                Out of stock
+                              </p>
+                            )}
+                            {stockInfo?.exceedsStock &&
+                              !stockInfo.isOutOfStock && (
+                                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1">
+                                  Only {stockInfo.currentStock} available
+                                </p>
+                              )}
+                          </div>
+
+                          <div className="mt-4 sm:mt-0 text-left sm:text-right flex flex-col justify-between">
+                            <p className="font-mono font-medium text-foreground">
+                              {formatPrice(item.price * item.quantity)}
+                            </p>
+                            {item.quantity > 1 && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {formatPrice(item.price)} each
+                              </p>
                             )}
                           </div>
-
-                          <div className="flex flex-1 flex-col justify-between sm:flex-row sm:gap-4">
-                            <div className="flex flex-col gap-1.5">
-                              <p className="font-medium text-foreground line-clamp-1">
-                                {item.name}
-                              </p>
-
-                              {(item.selectedSize || item.selectedColor) && (
-                                <p className="text-muted-foreground text-xs font-medium">
-                                  {item.selectedSize && (
-                                    <span>Size: {item.selectedSize}</span>
-                                  )}
-                                  {item.selectedSize && item.selectedColor && (
-                                    <span className="mx-2 text-border">|</span>
-                                  )}
-                                  {item.selectedColor && (
-                                    <span>Color: {item.selectedColor}</span>
-                                  )}
-                                </p>
-                              )}
-
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Qty:{" "}
-                                <span className="font-medium text-foreground">
-                                  {item.quantity}
-                                </span>
-                              </p>
-
-                              {/* Error States */}
-                              {stockInfo?.isOutOfStock && (
-                                <p className="text-xs font-semibold text-destructive mt-1">
-                                  Out of stock
-                                </p>
-                              )}
-                              {stockInfo?.exceedsStock &&
-                                !stockInfo.isOutOfStock && (
-                                  <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mt-1">
-                                    Only {stockInfo.currentStock} available
-                                  </p>
-                                )}
-                            </div>
-
-                            <div className="mt-4 sm:mt-0 text-left sm:text-right flex flex-col justify-between">
-                              <p className="font-mono font-medium text-foreground">
-                                {formatPrice(item.price * item.quantity)}
-                              </p>
-                              {item.quantity > 1 && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {formatPrice(item.price)} each
-                                </p>
-                              )}
-                            </div>
-                          </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
 

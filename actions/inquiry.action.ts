@@ -8,6 +8,16 @@ import { zSchema, ZSchemaType } from "@/lib/zod";
 import { client, writeClient } from "@/sanity/lib/client";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { queueEmailTask } from "@/lib/email-queue";
+import {
+  enforceRateLimit,
+  SecurityError,
+  verifyTurnstileToken,
+} from "@/lib/security";
+
+type InquiryResult =
+  | { success: true; resendError: boolean; message: string }
+  | { success: false; message: string; details?: unknown };
 
 export async function submitInquiryForm(
   formData: ZSchemaType["inquiry"],
@@ -16,7 +26,7 @@ export async function submitInquiryForm(
     _type: "asset";
     asset: { _type: "reference"; _ref: string };
   }[],
-) {
+): Promise<InquiryResult> {
   const { userId } = await auth();
   const user = await currentUser();
   if (!userId || !user) {
@@ -40,6 +50,9 @@ export async function submitInquiryForm(
     validation.data!;
 
   try {
+    await enforceRateLimit("inquiry", 5, 60_000, userId);
+    await verifyTurnstileToken(validation.data.captchaToken, "inquiry");
+
     // 1. Create inquiry document (no need to upload files again)
     const inquiry = await writeClient.create({
       _type: "inquiry",
@@ -74,35 +87,55 @@ export async function submitInquiryForm(
       day: "numeric",
     });
 
-    // 4. Send email
-    const resend = getResend();
     const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);
 
-    const { error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL!,
-      to: siteConfig.supportEmail,
-      subject: `New Custom Order Enquiry: ${fullName}`,
-      react: AdminInquiryEmail({
-        fullName,
-        email,
-        phone,
-        eventType: eventTypeLabel,
-        eventDate: eventDateFormatted,
-        budget,
-        dreamDress,
-        inspirationPhotos: imageUrls,
-        inquiryId: inquiry._id,
-        socialHandles,
-      }),
+    queueEmailTask(async () => {
+      const resend = getResend();
+      const { error } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL!,
+        to: siteConfig.supportEmail,
+        subject: `New Custom Order Enquiry: ${fullName}`,
+        react: AdminInquiryEmail({
+          fullName,
+          email,
+          phone,
+          eventType: eventTypeLabel,
+          eventDate: eventDateFormatted,
+          budget,
+          dreamDress,
+          inspirationPhotos: imageUrls,
+          inquiryId: inquiry._id,
+          socialHandles,
+        }),
+      });
+
+      if (error) throw new Error(error.message);
     });
 
     return {
       success: true,
-      resendError: Boolean(error?.message),
+      resendError: false,
       message:
         "Thank you for your custom order inquiry. We will get back to you within 24-48 hours.",
     };
   } catch (error) {
+    // Clean up orphaned assets if the submission failed
+    if (assetRefs.length > 0) {
+      try {
+        for (const ref of assetRefs) {
+          await writeClient.delete(ref.asset._ref);
+        }
+        console.log(
+          `Cleaned up ${assetRefs.length} orphaned asset(s) after inquiry failure.`,
+        );
+      } catch (cleanupError) {
+        console.error("Failed to clean up orphaned assets:", cleanupError);
+      }
+    }
+
+    if (error instanceof SecurityError) {
+      return { success: false, message: error.message };
+    }
     console.error("Inquiry service error:", error);
     return {
       success: false,

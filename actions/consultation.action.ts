@@ -1,6 +1,7 @@
 "use server";
 
 import { siteConfig } from "@/config/site.config";
+import { BOOKING_TIMEZONE, SLOT_INTERVAL } from "@/constants/booking";
 import { resolveFieldValue } from "@/lib/consultation";
 import { getStripe } from "@/lib/stripe";
 import { FormCard } from "@/sanity.types";
@@ -15,16 +16,26 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { randomUUID } from "crypto";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
-const BOOKING_TIMEZONE = "America/New_York";
-const SLOT_INTERVAL = 30;
+type BookConsultationResult =
+  | {
+    success: true;
+    url: string | null;
+    bookingId: string;
+    consultationSlug: string;
+  }
+  | { success: false; message: string };
 
 // --------------------------------------------------------------
 // BOOK CONSULTATION – creates booking and Stripe Checkout session
 // --------------------------------------------------------------
-export async function bookConsultation(formData: Record<string, unknown>) {
+export async function bookConsultation(
+  formData: Record<string, unknown>,
+): Promise<BookConsultationResult> {
   const { userId } = await auth();
   const user = await currentUser();
-  if (!userId || !user) throw new Error("Unauthorized");
+  if (!userId || !user) {
+    return { success: false, message: "Unauthorized" };
+  }
 
   const { consultationSlug, dateTime, paymentMethod, ...rest } = formData;
   if (!consultationSlug || !dateTime) {
@@ -63,7 +74,10 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     dateStr,
   );
   if (availability.blocked) {
-    return { success: false, message: availability.message };
+    return {
+      success: false,
+      message: availability.message ?? "We're experiencing high demand. Please try again later or select a different time.",
+    };
   }
 
   const timeStr = formatTime(selectedMinutes);
@@ -171,6 +185,43 @@ export async function bookConsultation(formData: Record<string, unknown>) {
       message:
         error instanceof Error ? error.message : "Failed to create booking.",
     };
+  }
+
+  // --- Post-creation double-booking check ---
+  // Query for any *other* booking that overlaps with this time slot
+  // to detect race conditions where two bookings were created simultaneously.
+  try {
+    const slotStart = new Date(dateTimeISO);
+    const slotEnd = new Date(
+      slotStart.getTime() + (consultation.duration || SLOT_INTERVAL) * 60 * 1000,
+    );
+    const conflicting = await client.fetch<{ _id: string; _createdAt: string }[]>(
+      `*[
+        _type == "booking" &&
+        _id != $bookingId &&
+        status != "cancelled" &&
+        dateTime >= $slotStart &&
+        dateTime < $slotEnd
+      ]{ _id, _createdAt } | order(_createdAt asc)`,
+      {
+        bookingId,
+        slotStart: slotStart.toISOString(),
+        slotEnd: slotEnd.toISOString(),
+      },
+    );
+
+    if (conflicting.length > 0) {
+      // Another booking got there first — roll back ours
+      await writeClient.delete(bookingId);
+      return {
+        success: false,
+        message:
+          "This time slot was just booked by someone else. Please choose a different time.",
+      };
+    }
+  } catch (conflictError) {
+    // If the check itself fails, log but continue — the booking exists
+    console.warn("Post-booking conflict check failed:", conflictError);
   }
 
   // --- Create Stripe Checkout Session ---

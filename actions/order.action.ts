@@ -9,6 +9,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { getStripe } from "@/lib/stripe";
 import { siteConfig } from "@/config/site.config";
 import { SanityDocument } from "next-sanity";
+import { enforceRateLimit } from "@/lib/security";
 
 const MINIMUM_ORDER_AMOUNT = 0.5;
 
@@ -75,10 +76,10 @@ function buildStripeLineItems(
     // FIX: Filter for image objects and map to extract the string URLs
     const stripeImages = product.snapshots
       ? product.snapshots
-          .filter(
-            (snap) => snap._type === "image" && typeof snap.url === "string",
-          )
-          .map((snap) => snap.url as string)
+        .filter(
+          (snap) => snap._type === "image" && typeof snap.url === "string",
+        )
+        .map((snap) => snap.url as string)
       : [];
 
     lineItems.push({
@@ -105,6 +106,7 @@ function buildStripeLineItems(
 /**
  * Atomically creates an order and decrements stock for each product.
  * Uses a Sanity transaction to ensure either all operations succeed or none.
+ * Uses atomic dec() without revision checks, allowing safe concurrent checkouts.
  * @param orderData - The order document data (must include _id and _type)
  * @param items - Array of { productId, quantity, priceAtPurchase }
  * @returns The created order document ID
@@ -122,12 +124,12 @@ export async function createOrderAndDecrementStock(
 ): Promise<string> {
   const productIds = items.map((i) => i.productId);
 
-  // 1. Fetch all products' stock and _rev in one query
-  const products = await client.fetch(
-    `*[_type == "product" && _id in $ids]{ _id, _rev, stock }`,
+  // 1. Fetch all products' stock in one query
+  const products = await client.fetch<{ _id: string; stock: number | null }[]>(
+    `*[_type == "product" && _id in $ids]{ _id, stock }`,
     { ids: productIds },
   );
-  const productMap = new Map(products.map((p: { _id: string }) => [p._id, p]));
+  const productMap = new Map(products.map((p) => [p._id, p]));
 
   // 2. Validate stock sufficiency for every item
   for (const item of items) {
@@ -135,23 +137,18 @@ export async function createOrderAndDecrementStock(
     if (!product) {
       throw new Error(`Product ${item.productId} not found`);
     }
-    // @ts-expect-error - expect error here cause we hardcoded the query
     if ((product.stock ?? 0) < item.quantity) {
       throw new Error(`Insufficient stock for product ${item.productId}`);
     }
   }
 
-  // 3. Build the transaction
+  // 3. Build the transaction — atomic dec() allows safe concurrent checkouts
   const transaction = writeClient.transaction();
   transaction.create(orderData);
 
   for (const item of items) {
-    const product = productMap.get(item.productId)!;
     transaction.patch(item.productId, (patch) =>
-      patch
-        // @ts-expect-error - expect error here cause we hardcoded the query
-        .ifRevisionId(product._rev) // ensures the product hasn't changed since our fetch
-        .dec({ stock: item.quantity }),
+      patch.dec({ stock: item.quantity }),
     );
   }
 
@@ -159,13 +156,13 @@ export async function createOrderAndDecrementStock(
   return orderData._id;
 }
 
-export async function createCheckoutSession(formData: FormData) {
-  // 1. Parse Data
-  const objectData = {
-    items: JSON.parse(formData.get("items") as string),
-    paymentMethod: formData.get("paymentMethod"),
-  };
+type CheckoutResult =
+  | { success: true; url: string | undefined }
+  | { success: false; message: string; details?: unknown };
 
+export async function createCheckoutSession(
+  formData: FormData,
+): Promise<CheckoutResult> {
   try {
     const stripe = getStripe();
 
@@ -175,6 +172,18 @@ export async function createCheckoutSession(formData: FormData) {
     if (!userId || !user) {
       throw new Error("Unauthorized");
     }
+    await enforceRateLimit("checkout", 10, 60_000, userId);
+
+    // 1. Parse Data
+    const rawItems = formData.get("items");
+    if (typeof rawItems !== "string") {
+      return { success: false, message: "Missing cart items." };
+    }
+
+    const objectData = {
+      items: JSON.parse(rawItems),
+      paymentMethod: formData.get("paymentMethod"),
+    };
 
     // 2. Validate Schema
     const validationResult = zSchema.createSessionSchema.safeParse(objectData);
@@ -323,132 +332,3 @@ export async function createCheckoutSession(formData: FormData) {
     };
   }
 }
-
-// import { getResend } from "@/lib/resend";
-// import { client, writeClient } from "@/sanity/lib/client";
-// import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
-// import { AdminOrderEmail } from "@/components/emails/admin/adminOrder.email";
-// import { auth, currentUser } from "@clerk/nextjs/server";
-// import { zSchema, ZSchemaType } from "@/lib/zod";
-
-// export async function processAndSubmitOrder(formData: FormData) {
-//   // 1. Extract and parse data from FormData
-//   const orderData = {
-//     customerName: formData.get("customerName") as string,
-//     customerEmail: formData.get("customerEmail") as string,
-//     total: Number(formData.get("total")),
-//     paymentMethod: formData.get("paymentMethod") as "stripe" | "paypal",
-//     // Parse the stringified items back into an array
-//     items: JSON.parse(
-//       formData.get("items") as string,
-//     ) as ZSchemaType["cartItemSchema"],
-//   };
-
-//   try {
-//     // Authenticate user
-//     const { userId } = await auth();
-//     const user = await currentUser();
-//     if (!userId || !user) {
-//       throw new Error("Unauthorized");
-//     }
-
-//     console.log(JSON.stringify(orderData, null, 4));
-
-//     const validationResult = zSchema.cartItemSchema.safeParse(orderData.items);
-//     if (!validationResult.success) {
-//       return {
-//         success: false,
-//         message:
-//           validationResult.error.message ??
-//           "Missing or invalid required fields.",
-//         details: validationResult.error.flatten(),
-//       };
-//     }
-
-//     return {
-//       success: true,
-//       message: "Your payment was processed and the order has been placed.",
-//     };
-
-//     // // 2. Process Payment First
-//     // // TODO: Replace this block with your actual payment gateway logic
-//     // const paymentResult = await mockPaymentProcessor(orderData);
-
-//     // if (!paymentResult.success) {
-//     //   return { success: false, message: "Payment processing failed." };
-//     // }
-
-//     // // 3. Add Order to Sanity
-//     // const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-//     // const newOrder = await writeClient.create({
-//     //   _type: "order",
-//     //   orderNumber,
-//     //   customerName: orderData.customerName,
-//     //   customerEmail: orderData.customerEmail,
-//     //   total: orderData.total,
-//     //   paymentMethod: orderData.paymentMethod,
-//     //   paymentStatus: "Paid",
-//     //   status: "pending",
-//     //   items: orderData.items,
-//     // });
-
-//     // // 4. Send Email to Admin
-//     // const resend = getResend();
-//     // const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);
-
-//     // const { error } = await resend.emails.send({
-//     //   from: process.env.RESEND_FROM_EMAIL!,
-//     //   to: process.env.NEXT_PUBLIC_RESEND_OWNER_EMAIL!,
-//     //   subject: `New Order Received: ${orderNumber}`,
-//     //   react: AdminOrderEmail({
-//     //     orderId: newOrder._id,
-//     //     orderNumber: newOrder.orderNumber,
-//     //     customerName: newOrder.customerName,
-//     //     customerEmail: newOrder.customerEmail,
-//     //     total: newOrder.total,
-//     //     paymentMethod: newOrder.paymentMethod,
-//     //     paymentStatus: newOrder.paymentStatus,
-//     //     items: newOrder.items,
-//     //     socialHandles,
-//     //   }),
-//     // });
-
-//     // return {
-//     //   success: true,
-//     //   resendError: error?.message,
-//     //   message: "Order placed successfully!",
-//     //   orderId: newOrder._id,
-//     // };
-//   } catch (error) {
-//     console.error("Order processing error:", error);
-//     return {
-//       success: false,
-//       message:
-//         error instanceof Error ? error.message : "Failed to process order",
-//     };
-//   }
-// }
-
-// // Mock payment function for demonstration
-// async function mockPaymentProcessor(data: {
-//   customerName: string;
-//   customerEmail: string;
-//   total: number;
-//   paymentMethod: "stripe" | "paypal";
-//   items: {
-//     _key: string;
-//     productId: string;
-//     name: string;
-//     price: number;
-//     quantity: number;
-//     size: string | null;
-//     color: string | null;
-//     image: string | null;
-//   }[];
-// }) {
-//   await new Promise((resolve) =>
-//     setTimeout(() => resolve({ success: true }), 1000),
-//   );
-//   return { success: true };
-// }

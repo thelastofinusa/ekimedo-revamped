@@ -1,8 +1,9 @@
 // lib/time.ts
 import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 import { parseISO } from "date-fns";
+import { BOOKING_TIMEZONE } from "@/constants/booking";
 
-const TIMEZONE = "America/New_York";
+const TIMEZONE = BOOKING_TIMEZONE;
 
 /** Get the current date/time in Eastern Time */
 export function getEasternNow(): Date {

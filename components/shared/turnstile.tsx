@@ -42,15 +42,22 @@ export function Turnstile({
   const widgetIdRef = React.useRef<string | null>(null);
   const [scriptReady, setScriptReady] = React.useState(false);
 
+  // Store callbacks in refs so they never cause re-renders
+  const onVerifyRef = React.useRef(onVerify);
+  const onExpireRef = React.useRef(onExpire);
+  React.useEffect(() => {
+    onVerifyRef.current = onVerify;
+    onExpireRef.current = onExpire;
+  }, [onVerify, onExpire]);
+
   const renderWidget = React.useCallback(() => {
     if (!containerRef.current || !window.turnstile || !siteKey) return;
 
-    // Remove existing widget if present (handles re-renders and page transitions)
     if (widgetIdRef.current !== null) {
       try {
         window.turnstile.remove(widgetIdRef.current);
       } catch {
-        // widget may have already been removed
+        // already removed
       }
       widgetIdRef.current = null;
     }
@@ -58,37 +65,29 @@ export function Turnstile({
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: siteKey,
       action,
-      callback: onVerify,
-      "expired-callback": () => onExpire?.(),
-      "error-callback": () => onExpire?.(),
+      // Use refs so these never cause widget re-render
+      callback: (token: string) => onVerifyRef.current(token),
+      "expired-callback": () => onExpireRef.current?.(),
+      "error-callback": () => onExpireRef.current?.(),
     });
-  }, [siteKey, action, onVerify, onExpire]);
+  }, [siteKey, action]); // ← onVerify/onExpire removed from deps
 
-  // Render when script becomes ready
   React.useEffect(() => {
-    if (scriptReady) {
-      renderWidget();
-    }
-
+    if (scriptReady) renderWidget();
     return () => {
-      // Cleanup widget on unmount
       if (widgetIdRef.current !== null && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
         } catch {
-          // ignore
+          /* ignore */
         }
         widgetIdRef.current = null;
       }
     };
   }, [scriptReady, renderWidget]);
 
-  // If script was already loaded (e.g. navigated back to this page),
-  // render immediately without waiting for onReady
   React.useEffect(() => {
-    if (window.turnstile) {
-      setScriptReady(true);
-    }
+    if (window.turnstile) setScriptReady(true);
   }, []);
 
   if (!siteKey) return null;

@@ -72,8 +72,24 @@ export const SubmitForm: React.FC<{
     name: "inquiryType",
   });
   const captchaToken = form.watch("captchaToken");
-
   const isCustomSelected = inquiryType === "custom";
+
+  const onVerifyRef = React.useRef((token: string) => {
+    form.setValue("captchaToken", token);
+  });
+  const onExpireRef = React.useRef(() => {
+    form.setValue("captchaToken", "");
+  });
+
+  // Stable wrappers that never change identity
+  const handleCaptchaVerify = React.useCallback(
+    (token: string) => onVerifyRef.current(token),
+    [],
+  );
+  const handleCaptchaExpire = React.useCallback(
+    () => onExpireRef.current(),
+    [],
+  );
 
   async function onSubmit(values: ZSchemaType["contact"]) {
     const refined = {
@@ -382,8 +398,8 @@ export const SubmitForm: React.FC<{
               <Turnstile
                 action="contact"
                 disabled={form.formState.isSubmitting || isSubmitting}
-                onVerify={(token) => form.setValue("captchaToken", token)}
-                onExpire={() => form.setValue("captchaToken", "")}
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
               />
 
               <Button

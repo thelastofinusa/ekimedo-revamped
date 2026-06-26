@@ -125,6 +125,23 @@ export const SubmitForm: React.FC<{
   const rating = useWatch({ control: form.control, name: "rating" });
   const customField = useWatch({ control: form.control, name: "customField" });
 
+  const onVerifyRef = React.useRef((token: string) => {
+    form.setValue("captchaToken", token);
+  });
+  const onExpireRef = React.useRef(() => {
+    form.setValue("captchaToken", "");
+  });
+
+  // Stable wrappers that never change identity
+  const handleCaptchaVerify = React.useCallback(
+    (token: string) => onVerifyRef.current(token),
+    [],
+  );
+  const handleCaptchaExpire = React.useCallback(
+    () => onExpireRef.current(),
+    [],
+  );
+
   React.useEffect(() => {
     const timer = setTimeout(() => {
       saveFormData({ review, rating, service: serviceValue, customField });
@@ -519,8 +536,8 @@ export const SubmitForm: React.FC<{
                     <Turnstile
                       action="review"
                       disabled={form.formState.isSubmitting || isSubmitting}
-                      onVerify={(token) => form.setValue("captchaToken", token)}
-                      onExpire={() => form.setValue("captchaToken", "")}
+                      onVerify={handleCaptchaVerify}
+                      onExpire={handleCaptchaExpire}
                     />
 
                     <div className="relative">

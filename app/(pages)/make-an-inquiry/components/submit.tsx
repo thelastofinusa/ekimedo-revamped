@@ -102,6 +102,23 @@ export const SubmitForm = () => {
   const watchedFields = form.watch();
   const captchaToken = form.watch("captchaToken");
 
+  const onVerifyRef = React.useRef((token: string) => {
+    form.setValue("captchaToken", token);
+  });
+  const onExpireRef = React.useRef(() => {
+    form.setValue("captchaToken", "");
+  });
+
+  // Stable wrappers that never change identity
+  const handleCaptchaVerify = React.useCallback(
+    (token: string) => onVerifyRef.current(token),
+    [],
+  );
+  const handleCaptchaExpire = React.useCallback(
+    () => onExpireRef.current(),
+    [],
+  );
+
   useEffect(() => {
     // Save after a short debounce (every 500ms after last change)
     const timer = setTimeout(() => {
@@ -516,8 +533,8 @@ export const SubmitForm = () => {
               <Turnstile
                 action="inquiry"
                 disabled={isSubmitting}
-                onVerify={(token) => form.setValue("captchaToken", token)}
-                onExpire={() => form.setValue("captchaToken", "")}
+                onVerify={handleCaptchaVerify}
+                onExpire={handleCaptchaExpire}
               />
               <div className="relative">
                 <ClerkLoading>

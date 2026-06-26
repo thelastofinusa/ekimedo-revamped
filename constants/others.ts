@@ -36,6 +36,6 @@ export const PAYMENT_METHODS: PAYMENT_METHODS_TYPE[] = [
     label: "PayPal",
     icon: TbBrandPaypalFilled,
     description: "Quick checkout with PayPal.",
-    isAvailable: true,
+    isAvailable: false,
   },
 ];

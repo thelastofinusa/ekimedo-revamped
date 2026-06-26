@@ -36,6 +36,7 @@ import {
 } from "@/actions/consultation.action";
 import { usePathname, useRouter } from "next/navigation";
 import { BookingAlertDialog } from "./alert";
+import { uploadFileToSanity } from "@/lib/upload";
 
 export const SubmitForm: React.FC<{
   consultation: QUERY_CONSULTATION_BY_SLUG_RESULT;
@@ -149,16 +150,63 @@ export const SubmitForm: React.FC<{
   }, [watchedValues, paymentMethod, consultation?.slug]);
 
   async function onSubmit(values: FormSchemaType) {
-    toast.loading("Processing payment. Please wait..", { id: "booking" });
-    const payload = {
-      ...values,
-      consultationSlug: consultation?.slug,
-      dateTime: values.consultationDate,
-      paymentMethod,
-    };
-
     startTransition(async () => {
       try {
+        // 1. Identify all file‑type fields from the consultation configuration
+        const fileFieldNames = new Set<string>();
+        for (const card of consultation?.formCards || []) {
+          for (const field of card.fields || []) {
+            if (field.type === "file") fileFieldNames.add(field.name as string);
+          }
+        }
+
+        // 2. Upload all files for every file field
+        const uploadedRefs: Record<
+          string,
+          {
+            _key: string;
+            _type: "image";
+            asset: { _type: "reference"; _ref: string };
+          }[]
+        > = {};
+
+        for (const fieldName of fileFieldNames) {
+          const files = values[fieldName] as File[] | undefined;
+          if (!files || files.length === 0) continue;
+
+          // inside the upload loop
+          const uploads = files.map((file) =>
+            uploadFileToSanity(file)
+              .then((asset) => ({
+                _key: crypto.randomUUID(),
+                _type: "image" as const,
+                asset: { _type: "reference" as const, _ref: asset._id },
+              }))
+              .catch((error) => {
+                toast.error(`Failed to upload ${file.name}: ${error.message}`);
+                throw error; // stop the whole submission
+              }),
+          );
+          uploadedRefs[fieldName] = await Promise.all(uploads);
+        }
+
+        // 3. Build the payload – replace File arrays with uploaded references
+        const payload: Record<string, unknown> = {};
+        for (const key of Object.keys(values)) {
+          if (fileFieldNames.has(key)) {
+            payload[key] = uploadedRefs[key] || []; // already uploaded references
+          } else {
+            payload[key] = values[key as keyof FormSchemaType];
+          }
+        }
+
+        // 4. Add consultation slug, date, payment method
+        payload.consultationSlug = consultation?.slug;
+        payload.dateTime = values.consultationDate;
+        payload.paymentMethod = paymentMethod;
+
+        // 5. Proceed with booking (server action now expects asset refs)
+        toast.loading("Processing payment. Please wait..", { id: "booking" });
         const result = await bookConsultation(payload);
         toast.dismiss("booking");
         if (result.success && result.url) {
@@ -220,9 +268,8 @@ export const SubmitForm: React.FC<{
                 {Array.isArray(consultation?.formCards) &&
                 consultation?.formCards.length > 0 ? (
                   consultation?.formCards.map((item, index) => {
-                    if (!Array.isArray(item.fields) || item.fields.length < 1) {
+                    if (!Array.isArray(item.fields) || item.fields.length < 1)
                       return null;
-                    }
 
                     return (
                       <div

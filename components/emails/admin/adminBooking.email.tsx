@@ -1,5 +1,6 @@
 import { EmailLayout } from "@/components/shared/emailLayout";
 import { siteConfig } from "@/config/site.config";
+import { formatEastern } from "@/lib/time";
 import { QUERY_SOCIAL_HANDLES_RESULT } from "@/sanity.types";
 import { Button, Hr, Link, Text } from "@react-email/components";
 
@@ -22,16 +23,10 @@ export const AdminBookingEmail = (props: {
 }) => {
   const bookingUrl = `${siteConfig.url}/admin/structure/consultationsBookings;booking;${props.bookingId}`;
 
-  // Format date for display
-  const bookingDate = new Date(props.dateTime);
-  const formattedDate = bookingDate.toLocaleString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const formattedDate = formatEastern(
+    props.dateTime,
+    "EEEE, MMMM d, yyyy 'at' h:mm a",
+  );
 
   const location =
     props.formFields &&

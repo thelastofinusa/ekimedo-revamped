@@ -2,6 +2,7 @@ import { Badge } from "@/components/shadcn/badge";
 import { Container } from "@/components/shared/container";
 import { getOrderStatus } from "@/constants/order";
 import { formatDate, formatPrice } from "@/lib/format";
+import { formatEastern } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { sanityFetch } from "@/sanity/lib/live";
 import { QUERY_ORDER_BY_ID } from "@/sanity/queries/orders.query";
@@ -62,7 +63,7 @@ export default async function OrderDetails(props: PageProps<"/orders/[id]">) {
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center gap-2">
               <p className="text-muted-foreground text-sm">
-                Placed on {formatDate(order.createdAt, "datetime")}
+                Placed on {formatEastern(order.createdAt as string, "PPp")}
               </p>
               <Badge
                 className={cn(

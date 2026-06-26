@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { z } from "zod";
 import { MAX_FILES_UPLOAD, MAX_SIZE_UPLOAD } from "./zod";
+import { formatEastern, getEasternTomorrow } from "./time";
 
 const fieldToZod = (field: FormField) => {
   let schema: z.ZodTypeAny;
@@ -187,16 +188,18 @@ export function buildDefaultValues(formCards: Consultation["formCards"]) {
           defaults[field.name as string] = [];
           break;
         case "date": {
-          const tomorrowDate = new Date();
-          tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-          defaults[field.name as string] = format(tomorrowDate, "yyyy-MM-dd");
+          const tomorrow = getEasternTomorrow();
+          defaults[field.name as string] = formatEastern(
+            tomorrow,
+            "yyyy-MM-dd",
+          );
           break;
         }
         case "datetime-local": {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrow = getEasternTomorrow();
+          // Set default time to 10:00 AM Eastern
           tomorrow.setHours(10, 0, 0, 0);
-          defaults[field.name as string] = format(
+          defaults[field.name as string] = formatEastern(
             tomorrow,
             "yyyy-MM-dd'T'HH:mm",
           );

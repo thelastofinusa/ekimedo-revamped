@@ -135,7 +135,7 @@ export const bookingType = defineType({
     prepare({ title, subtitle, date, status }) {
       return {
         title: title || "Booking",
-        subtitle: `${subtitle || ""} — ${new Date(date).toLocaleString()}`,
+        subtitle: `${subtitle || ""} — ${new Date(date).toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "medium", timeStyle: "short" })}`,
         description: `Status: ${status || "pending"}`,
       };
     },

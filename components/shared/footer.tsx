@@ -14,6 +14,7 @@ import {
   QUERY_BUSINESS_HOURS_RESULT,
   QUERY_SOCIAL_HANDLES_RESULT,
 } from "@/sanity.types";
+import { getEasternDay, getEasternNow } from "@/lib/time";
 
 const DAYS = [
   "Monday",
@@ -25,13 +26,8 @@ const DAYS = [
   "Sunday",
 ];
 
-function isToday(day: string) {
-  return (
-    new Intl.DateTimeFormat("en-US", {
-      weekday: "long",
-    }).format(new Date()) === day
-  );
-}
+const now = getEasternNow();
+const isToday = (day: string) => getEasternDay(now) === day;
 
 // Helper to format "HH:mm" to "h:mm AM/PM"
 function formatTimeTo12Hour(timeStr: string | null | undefined): string {
@@ -65,7 +61,7 @@ export const Footer: React.FC<{
   initialHours: QUERY_BUSINESS_HOURS_RESULT;
   socialHandles: QUERY_SOCIAL_HANDLES_RESULT;
 }> = ({ initialHours, socialHandles }) => {
-  const [now, setNow] = React.useState(new Date());
+  const [_now, setNow] = React.useState(new Date());
 
   // Update the 'now' state every 60 seconds
   React.useEffect(() => {

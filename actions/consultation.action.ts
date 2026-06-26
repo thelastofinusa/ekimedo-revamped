@@ -3,6 +3,7 @@
 import { siteConfig } from "@/config/site.config";
 import { resolveFieldValue } from "@/lib/consultation";
 import { getStripe } from "@/lib/stripe";
+import { getEasternDay } from "@/lib/time";
 import { FormCard } from "@/sanity.types";
 import { client, writeClient } from "@/sanity/lib/client";
 import {
@@ -94,15 +95,15 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     if (rawValue === undefined) continue;
 
     if (field.type === "file") {
-      const files = (Array.isArray(rawValue) ? rawValue : [rawValue]) as File[];
-      const uploadedFiles = await uploadFieldFiles(files);
+      // Expect the client to have already uploaded files and passed references
+      const uploadedFiles = Array.isArray(rawValue) ? rawValue : [rawValue];
       formFields.push({
         _key: randomUUID(),
         fieldName: field.name,
         fieldLabel: field.label || field.name,
         fieldType: field.type,
         value: `${uploadedFiles.length} image(s) uploaded`,
-        files: uploadedFiles,
+        files: uploadedFiles, // already in { _type, _key, asset } format
       });
       continue;
     }
@@ -230,13 +231,7 @@ export async function getAvailableTimes(
 
   // 2. Get business hours for that day
   const businessHours = await client.fetch(QUERY_BUSINESS_HOURS);
-  const dayOfWeek = new Date(dateStr + "T00:00:00Z").toLocaleDateString(
-    "en-US",
-    {
-      weekday: "long",
-      timeZone: "UTC",
-    },
-  );
+  const dayOfWeek = getEasternDay(dateStr);
   const dayHours = businessHours?.hours?.find((h) => h.day === dayOfWeek);
   if (!dayHours || !dayHours.isOpen) {
     return {
@@ -335,23 +330,6 @@ export async function getAvailableTimes(
   }
 
   return { slots: availableSlots, blocked: false, message: null };
-}
-
-async function uploadFieldFiles(files: File[]) {
-  const uploaded = [];
-  for (const file of files) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const asset = await writeClient.assets.upload("image", buffer, {
-      filename: file.name,
-      contentType: file.type,
-    });
-    uploaded.push({
-      _type: "image" as const,
-      _key: randomUUID(),
-      asset: { _type: "reference" as const, _ref: asset._id },
-    });
-  }
-  return uploaded;
 }
 
 export async function cancelBooking(bookingId: string) {

@@ -1,3 +1,5 @@
+import { formatEastern } from "./time";
+
 export function formatDuration(
   minutes: number | string | null | undefined,
 ): string {
@@ -95,4 +97,18 @@ export function formatOrderNumber(
 ): string {
   if (!orderNumber) return "N/A";
   return orderNumber.split("-").pop() ?? orderNumber;
+}
+
+export function formatEasternDate(
+  date: string | null | undefined,
+  format: "short" | "long" | "datetime" = "long",
+  fallback = "Date unknown",
+): string {
+  if (!date) return fallback;
+  const map = {
+    short: "MMM d",
+    long: "MMMM d, yyyy",
+    datetime: "MMMM d, yyyy 'at' h:mm a",
+  };
+  return formatEastern(date, map[format]);
 }

@@ -52,7 +52,6 @@ import { MAX_FILES_UPLOAD, MAX_SIZE_UPLOAD } from "@/lib/zod";
 import { getAvailableTimes } from "@/actions/consultation.action";
 import { RadioGroup, RadioGroupItem } from "@/components/shadcn/radio-group";
 import { Lightbox } from "@/components/shared/lightbox";
-import { urlFor } from "@/sanity/lib/image";
 
 export const RenderControl: React.FC<{
   isSubmitting: boolean;

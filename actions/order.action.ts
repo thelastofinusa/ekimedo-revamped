@@ -248,7 +248,13 @@ export async function createCheckoutSession(formData: FormData) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      payment_method_types: [paymentMethod as "card" | "paypal"],
+      payment_method_types: [
+        paymentMethod === "stripe"
+          ? "card"
+          : paymentMethod === "paypal"
+            ? "paypal"
+            : "card",
+      ], // 👈 fixed
       customer_email: metadata.userEmail,
       metadata,
       payment_intent_data: { metadata },

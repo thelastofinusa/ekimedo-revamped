@@ -52,6 +52,7 @@ import { MAX_FILES_UPLOAD, MAX_SIZE_UPLOAD } from "@/lib/zod";
 import { getAvailableTimes } from "@/actions/consultation.action";
 import { RadioGroup, RadioGroupItem } from "@/components/shadcn/radio-group";
 import { Lightbox } from "@/components/shared/lightbox";
+import { toZonedTime } from "date-fns-tz";
 
 export const RenderControl: React.FC<{
   isSubmitting: boolean;
@@ -626,16 +627,24 @@ function DateTimeField({
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     userInteracted.current = true;
+
+    // Use the selected date but keep the currently chosen time (if any)
     let time = selectedTime;
     if (!time && availableSlots.length > 0) {
       time = availableSlots[0];
     } else if (!time) {
-      time = "10:00"; // fallback default
+      time = "10:00";
     }
-    const combined = new Date(date);
-    const [hours, minutes] = time.split(":").map(Number);
-    combined.setHours(hours || 0, minutes || 0, 0, 0);
-    onChange(format(combined, "yyyy-MM-dd'T'HH:mm"));
+
+    // Construct a Date object that represents the Eastern time
+    const dateStr = format(date, "yyyy-MM-dd");
+    const easternDate = toZonedTime(
+      `${dateStr}T${time}:00`,
+      "America/New_York",
+    );
+
+    // Store as UTC ISO string
+    onChange(easternDate.toISOString());
     setOpen(false);
     setTimeError(null);
   };
@@ -648,10 +657,13 @@ function DateTimeField({
       return;
     }
     setTimeError(null);
-    const combined = new Date(selectedDate);
-    const [hours, minutes] = newTime.split(":").map(Number);
-    combined.setHours(hours, minutes, 0, 0);
-    onChange(format(combined, "yyyy-MM-dd'T'HH:mm"));
+
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const easternDate = toZonedTime(
+      `${dateStr}T${newTime}:00`,
+      "America/New_York",
+    );
+    onChange(easternDate.toISOString());
   };
 
   const today = new Date();

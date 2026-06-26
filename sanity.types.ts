@@ -366,10 +366,8 @@ export type BlockedSlot = {
   _updatedAt: string;
   _rev: string;
   consultation?: ConsultationReference;
-  date?: string;
-  allDay?: boolean;
-  startTime?: string;
-  duration?: number;
+  startDateTime?: string;
+  endDateTime?: string;
   message?: string;
 };
 
@@ -569,6 +567,15 @@ export type HslaColor = {
   a?: number;
 };
 
+export type MediaTag = {
+  _id: string;
+  _type: "media.tag";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name?: Slug;
+};
+
 export type SanityImagePaletteSwatch = {
   _type: "sanity.imagePaletteSwatch";
   background?: string;
@@ -708,6 +715,7 @@ export type AllSanitySchemaTypes =
   | RgbaColor
   | HsvaColor
   | HslaColor
+  | MediaTag
   | SanityImagePaletteSwatch
   | SanityImagePalette
   | SanityImageDimensions
@@ -719,13 +727,11 @@ export type AllSanitySchemaTypes =
 
 // Source: sanity/queries/blockedSlot.query.ts
 // Variable: QUERY_BLOCKED_SLOTS
-// Query: *[_type == "blockedSlot" && date == $date && ( !defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) ] {    allDay,    startTime,    duration,    message,    "consultationDuration": consultation->duration  }
+// Query: *[_type == "blockedSlot" &&    (!defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) &&    startDateTime <= $endOfDay &&     (!defined(endDateTime) || endDateTime >= $startOfDay)  ] {    startDateTime,    endDateTime,    message  }
 export type QUERY_BLOCKED_SLOTS_RESULT = Array<{
-  allDay: boolean | null;
-  startTime: string | null;
-  duration: number | null;
+  startDateTime: string | null;
+  endDateTime: string | null;
   message: string | null;
-  consultationDuration: number | null;
 }>;
 
 // Source: sanity/queries/blockedSlot.query.ts
@@ -1383,7 +1389,7 @@ export type QUERY_SOCIAL_HANDLES_RESULT = Array<{
 import "@sanity/client";
 declare module "@sanity/client" {
   interface SanityQueries {
-    '\n  *[_type == "blockedSlot" && date == $date && ( !defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) ] {\n    allDay,\n    startTime,\n    duration,\n    message,\n    "consultationDuration": consultation->duration\n  }\n': QUERY_BLOCKED_SLOTS_RESULT;
+    '\n  *[_type == "blockedSlot" &&\n    (!defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) &&\n    startDateTime <= $endOfDay && \n    (!defined(endDateTime) || endDateTime >= $startOfDay)\n  ] {\n    startDateTime,\n    endDateTime,\n    message\n  }\n': QUERY_BLOCKED_SLOTS_RESULT;
     '\n  *[_type == "booking" && consultation._ref == $consultationId && dateTime >= $start && dateTime < $end] {\n    dateTime\n  }\n': QUERY_BOOKINGS_FOR_DATE_RESULT;
     '\n  *[_type == "booking" && _id == $id][0] {\n    _id,\n    consultation->{\n      title\n    },\n    dateTime,\n    customerName,\n    customerEmail,\n    customerPhone,\n    paymentMethod,\n    status,\n    formFields[] {\n      fieldLabel,\n      fieldType,\n      fieldName,\n      value,\n      files[] {\n        asset->{\n          url\n        }\n      }\n    }\n  }\n': QUERY_BOOKING_BY_ID_RESULT;
     '\n  *[_type == "booking" && stripeSessionId == $sessionId][0] {\n    _id,\n    consultation->{\n      title\n    },\n    dateTime,\n    customerName,\n    customerEmail,\n    customerPhone,\n    paymentMethod,\n    status,\n    formFields[] {\n      fieldLabel,\n      fieldType,\n      fieldName,\n      value,\n      files[] {\n        asset->{\n          url\n        }\n      }\n    }\n  }\n': QUERY_BOOKING_BY_STRIPE_SESSION_ID_RESULT;

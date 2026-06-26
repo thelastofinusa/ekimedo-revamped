@@ -14,6 +14,7 @@ import { QUERY_BOOKING_BY_ID } from "@/sanity/queries/booking.query";
 import { QUERY_BUSINESS_HOURS } from "@/sanity/queries/hour.query";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { randomUUID } from "crypto";
+import { formatInTimeZone, toZonedTime } from "date-fns-tz";
 
 // --------------------------------------------------------------
 // BOOK CONSULTATION – creates booking and Stripe Checkout session
@@ -28,8 +29,29 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     return { success: false, message: "Missing consultation or date/time." };
   }
 
-  const dateObj = new Date(dateTime as string);
-  const dateStr = dateObj.toISOString().split("T")[0];
+  const dateTimeISO = dateTime as string; // e.g., "2026-07-03T16:30:00.000Z"
+  const dateObj = new Date(dateTimeISO); // UTC Date
+  const dateStr = dateObj.toISOString().split("T")[0]; // "2026-07-03"
+
+  // Get Eastern time for business‑hour check
+  const easternTimeStr = formatInTimeZone(dateObj, "America/New_York", "HH:mm");
+  const selectedMinutes = parseTime(easternTimeStr);
+
+  // 1. Business hours check (early)
+  const businessHours = await client.fetch(QUERY_BUSINESS_HOURS);
+  const dayOfWeek = getEasternDay(dateStr);
+  const dayHours = businessHours?.hours?.find((h) => h.day === dayOfWeek);
+  if (!dayHours || !dayHours.isOpen) {
+    return { success: false, message: "We are closed on this day." };
+  }
+  const openMinutes = parseTime(dayHours.startTime as string);
+  const closeMinutes = parseTime(dayHours.endTime as string);
+  if (selectedMinutes < openMinutes || selectedMinutes >= closeMinutes) {
+    return {
+      success: false,
+      message: "Selected time is outside business hours.",
+    };
+  }
 
   // Re-check availability (prevent race conditions)
   const availability = await getAvailableTimes(
@@ -40,9 +62,7 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     return { success: false, message: availability.message };
   }
 
-  const timeStr = formatTime(
-    dateObj.getUTCHours() * 60 + dateObj.getUTCMinutes(),
-  );
+  const timeStr = formatTime(selectedMinutes);
   if (!availability.slots.includes(timeStr)) {
     return { success: false, message: "The selected time is not available." };
   }
@@ -131,7 +151,7 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     const booking = await writeClient.create({
       _type: "booking",
       consultation: { _type: "reference", _ref: consultation._id },
-      dateTime: dateTime,
+      dateTime: dateTimeISO,
       customerName: customerName,
       customerEmail: user.primaryEmailAddress?.emailAddress || "",
       customerPhone: (rest.phone as string) || "",
@@ -155,9 +175,16 @@ export async function bookConsultation(formData: Record<string, unknown>) {
   const amount = consultation.price || 0;
 
   try {
+    // PayPal is handled separately via native API – only "card" here
     session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: [paymentMethod as "card" | "paypal"],
+      payment_method_types: [
+        paymentMethod === "stripe"
+          ? "card"
+          : paymentMethod === "paypal"
+            ? "paypal"
+            : "card",
+      ], // 👈 fixed
       line_items: [
         {
           price_data: {
@@ -221,7 +248,6 @@ export async function getAvailableTimes(
   consultationSlug: string,
   dateStr: string,
 ): Promise<AvailabilityResult> {
-  // 1. Get consultation ID
   const consultation = await client.fetch(
     `*[_type == "consultation" && slug.current == $slug][0]{ _id }`,
     { slug: consultationSlug },
@@ -229,95 +255,90 @@ export async function getAvailableTimes(
   if (!consultation) throw new Error("Consultation not found");
   const consultationId = consultation._id;
 
-  // 2. Get business hours for that day
+  // 1. Business hours
   const businessHours = await client.fetch(QUERY_BUSINESS_HOURS);
   const dayOfWeek = getEasternDay(dateStr);
   const dayHours = businessHours?.hours?.find((h) => h.day === dayOfWeek);
   if (!dayHours || !dayHours.isOpen) {
-    return {
-      slots: [],
-      blocked: true,
-      message: "We are closed on this day.",
-    };
+    return { slots: [], blocked: true, message: "We are closed on this day." };
   }
-  const openTime = dayHours.startTime;
-  const closeTime = dayHours.endTime;
-
-  // 3. Generate all possible slots (30‑minute intervals)
+  const openTime = dayHours.startTime as string;
+  const closeTime = dayHours.endTime as string;
   const SLOT_INTERVAL = 30;
   const slots: string[] = [];
-  let current = parseTime(openTime as string);
-  const close = parseTime(closeTime as string);
+  let current = parseTime(openTime);
+  const close = parseTime(closeTime);
   while (current < close) {
     slots.push(formatTime(current));
     current += SLOT_INTERVAL;
   }
 
-  // 4. Fetch blocked slots (global + specific)
+  // 2. Fetch blocked slots that overlap with the day (time-range aware)
+  const startOfDay = new Date(dateStr + "T00:00:00.000Z");
+  const endOfDay = new Date(dateStr + "T23:59:59.999Z");
   const blockedSlots = await client.fetch(QUERY_BLOCKED_SLOTS, {
-    date: dateStr,
     consultationId,
+    startOfDay: startOfDay.toISOString(),
+    endOfDay: endOfDay.toISOString(),
   });
 
-  let blockMessage: string | null = null;
   const blockedTimes = new Set<string>();
-  let allDayBlocked = false;
-  const DEFAULT_DURATION = 60;
+  let blockMessage: string | null = null;
 
   for (const block of blockedSlots) {
-    if (block.allDay) {
-      allDayBlocked = true;
-      if (block.message) blockMessage = block.message;
-      break;
+    const blockStart = new Date(block.startDateTime as string);
+    const blockEnd = block.endDateTime ? new Date(block.endDateTime) : null;
+
+    // If block covers the entire day (00:00 to 23:59 or no end), block all slots
+    const isAllDay =
+      !blockEnd ||
+      (blockStart.getHours() === 0 &&
+        blockStart.getMinutes() === 0 &&
+        blockEnd.getHours() === 23 &&
+        blockEnd.getMinutes() === 59);
+
+    if (isAllDay) {
+      // Block everything and return immediately with the message
+      return {
+        slots: [],
+        blocked: true,
+        message: block.message || "This day is fully booked.",
+      };
     }
 
-    let duration =
-      block.consultationDuration ?? block.duration ?? DEFAULT_DURATION;
-    if (typeof duration !== "number" || duration <= 0) {
-      duration = DEFAULT_DURATION;
-    }
-
-    const blockStart = parseTime(block.startTime as string);
-    const blockEnd = blockStart + duration;
-
+    // Otherwise, check each slot against this block's time window
     for (const slot of slots) {
-      const slotMinutes = parseTime(slot);
-      if (slotMinutes >= blockStart && slotMinutes < blockEnd) {
+      const [h, m] = slot.split(":").map(Number);
+      const slotDate = new Date(dateStr + `T${slot}:00.000Z`);
+      const slotTime = slotDate.getTime();
+
+      if (
+        blockStart.getTime() <= slotTime &&
+        (!blockEnd || slotTime < blockEnd.getTime())
+      ) {
         blockedTimes.add(slot);
+        if (block.message && !blockMessage) {
+          blockMessage = block.message;
+        }
       }
     }
-
-    if (block.message && !blockMessage) {
-      blockMessage = block.message;
-    }
   }
 
-  // --- FIX: early return if allDay blocked ---
-  if (allDayBlocked) {
-    return {
-      slots: [],
-      blocked: true,
-      message: blockMessage || "This day is fully booked.",
-    };
-  }
-
-  // 5. Fetch existing bookings for this date
-  const startDate = new Date(dateStr + "T00:00:00.000Z");
-  const endDate = new Date(dateStr + "T23:59:59.999Z");
+  // 3. Fetch existing bookings for this date
   const bookings = await client.fetch(QUERY_BOOKINGS_FOR_DATE, {
     consultationId,
-    start: startDate.toISOString(),
-    end: endDate.toISOString(),
+    start: startOfDay.toISOString(),
+    end: endOfDay.toISOString(),
   });
 
   const bookedTimes = new Set<string>();
   for (const booking of bookings) {
     const bookingDate = new Date(booking.dateTime as string);
-    const mins = bookingDate.getHours() * 60 + bookingDate.getMinutes();
+    const mins = bookingDate.getUTCHours() * 60 + bookingDate.getUTCMinutes();
     bookedTimes.add(formatTime(mins));
   }
 
-  // 6. Filter out blocked and booked slots
+  // 4. Filter out blocked and booked slots
   const unavailable = new Set([...blockedTimes, ...bookedTimes]);
   const availableSlots = slots.filter((slot) => !unavailable.has(slot));
 

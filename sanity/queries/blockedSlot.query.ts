@@ -1,12 +1,14 @@
 import { defineQuery } from "next-sanity";
 
 export const QUERY_BLOCKED_SLOTS = defineQuery(`
-  *[_type == "blockedSlot" && date == $date && ( !defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) ] {
-    allDay,
-    startTime,
-    duration,
-    message,
-    "consultationDuration": consultation->duration
+  *[_type == "blockedSlot" &&
+    (!defined($consultationId) || consultation._ref == $consultationId || consultation._ref == null) &&
+    startDateTime <= $endOfDay && 
+    (!defined(endDateTime) || endDateTime >= $startOfDay)
+  ] {
+    startDateTime,
+    endDateTime,
+    message
   }
 `);
 

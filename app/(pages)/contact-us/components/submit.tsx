@@ -46,6 +46,7 @@ import { Input } from "@/components/shadcn/input";
 import { PhoneInput } from "@/components/shadcn/phone-input";
 import { toast } from "sonner";
 import { submitContactForm } from "@/actions/contact.action";
+import { Turnstile } from "@/components/shared/turnstile";
 
 export const SubmitForm: React.FC<{
   categories: QUERY_CATEGORIES_RESULT;
@@ -62,6 +63,7 @@ export const SubmitForm: React.FC<{
       inquiryType: "",
       phone: "",
       message: "",
+      captchaToken: "",
     },
   });
 
@@ -69,6 +71,7 @@ export const SubmitForm: React.FC<{
     control: form.control,
     name: "inquiryType",
   });
+  const captchaToken = form.watch("captchaToken");
 
   const isCustomSelected = inquiryType === "custom";
 
@@ -376,11 +379,19 @@ export const SubmitForm: React.FC<{
                 }}
               />
 
+              <Turnstile
+                action="contact"
+                disabled={form.formState.isSubmitting || isSubmitting}
+                onVerify={(token) => form.setValue("captchaToken", token)}
+                onExpire={() => form.setValue("captchaToken", "")}
+              />
+
               <Button
                 size="xl"
                 type="submit"
                 className="w-full"
                 loadingText="Sending Message..."
+                disabled={!captchaToken}
                 isLoading={form.formState.isSubmitting || isSubmitting}
               >
                 <span>Send Message</span>

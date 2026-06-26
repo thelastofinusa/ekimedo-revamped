@@ -51,6 +51,7 @@ import { ClerkLoaded, ClerkLoading, Show, SignInButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { RiUser6Line } from "react-icons/ri";
 import { Skeleton } from "@/components/shadcn/skeleton";
+import { Turnstile } from "@/components/shared/turnstile";
 
 const STORAGE_KEY = "inquiryFormDraft";
 
@@ -90,6 +91,7 @@ export const SubmitForm = () => {
       budget: savedData?.budget || undefined,
       dreamDress: savedData?.dreamDress || "",
       inspirationPhotos: [], // always start empty
+      captchaToken: "",
     },
   });
 
@@ -98,6 +100,7 @@ export const SubmitForm = () => {
 
   // ---------- Autosave to localStorage ----------
   const watchedFields = form.watch();
+  const captchaToken = form.watch("captchaToken");
 
   useEffect(() => {
     // Save after a short debounce (every 500ms after last change)
@@ -510,6 +513,12 @@ export const SubmitForm = () => {
                 }}
               />
 
+              <Turnstile
+                action="inquiry"
+                disabled={isSubmitting}
+                onVerify={(token) => form.setValue("captchaToken", token)}
+                onExpire={() => form.setValue("captchaToken", "")}
+              />
               <div className="relative">
                 <ClerkLoading>
                   <Skeleton className="h-14" />
@@ -520,7 +529,9 @@ export const SubmitForm = () => {
                       type="submit"
                       className="w-full"
                       size="xl"
-                      disabled={isSubmitting || overallProgress > 0}
+                      disabled={
+                        !captchaToken || isSubmitting || overallProgress > 0
+                      }
                       loadingText={
                         overallProgress > 0
                           ? `Uploading files ${overallProgress}%`

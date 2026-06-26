@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/incompatible-library */
 "use client";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -54,18 +53,19 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImagePlusIcon, XIcon } from "lucide-react";
 import React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { submitReviewForm } from "@/actions/review.action";
 import { usePathname } from "next/navigation";
 import { SanityAssetResult, uploadFileToSanity } from "@/lib/upload";
 import { Skeleton } from "@/components/shadcn/skeleton";
 import { RiUser6Line } from "react-icons/ri";
+import { Turnstile } from "@/components/shared/turnstile";
 
 const STORAGE_KEY = "reviewFormDraft";
 
 function loadFormData(): Partial<ZSchemaType["review"]> | null {
-  if (typeof window === "undefined") return null; // SSR guard
+  if (typeof window === "undefined") return null;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
@@ -79,30 +79,23 @@ function loadFormData(): Partial<ZSchemaType["review"]> | null {
 }
 
 function saveFormData(data: Partial<ZSchemaType["review"]>) {
-  if (typeof window === "undefined") return; // SSR guard
+  if (typeof window === "undefined") return;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { workAssets, ...rest } = data;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
 }
 
-/**
- * Review submission form component
- */
 export const SubmitForm: React.FC<{
   consultations: QUERY_CONSULTATIONS_RESULT;
 }> = ({ consultations }) => {
   const pathname = usePathname();
-
-  // Authentication and user data
   const { user } = useUser();
   const customerEmail =
     user?.primaryEmailAddress?.emailAddress ??
     user?.emailAddresses?.[0]?.emailAddress;
 
-  // Load saved data (if any) to prefill the form
   const savedData = loadFormData();
 
-  // Form setup
   const form = useForm<ZSchemaType["review"]>({
     resolver: zodResolver(zSchema.review),
     defaultValues: {
@@ -111,41 +104,36 @@ export const SubmitForm: React.FC<{
       service: savedData?.service || "",
       customField: savedData?.customField || "",
       workAssets: [] as File[],
+      captchaToken: "",
     },
   });
 
   const [isSubmitting, startTransition] = React.useTransition();
   const [overallProgress, setOverallProgress] = React.useState(0);
-  const [isCustomSelected, setIsCustomSelected] = React.useState(false);
   const [hasPermission, setHasPermission] = React.useState(true);
 
-  // ---------- Autosave to localStorage ----------
-  const watchedFields = form.watch();
+  // Derived — no separate state needed
+  const serviceValue = useWatch({ control: form.control, name: "service" });
+  const captchaToken = useWatch({
+    control: form.control,
+    name: "captchaToken",
+  });
+  const isCustomSelected = serviceValue === "custom";
 
-  /**
-   * Toggle custom service input
-   */
+  // Autosave — watch only the fields that should be saved
+  const review = useWatch({ control: form.control, name: "review" });
+  const rating = useWatch({ control: form.control, name: "rating" });
+  const customField = useWatch({ control: form.control, name: "customField" });
+
   React.useEffect(() => {
-    setIsCustomSelected(watchedFields.service === "custom");
-    // Save after a short debounce (every 500ms after last change)
     const timer = setTimeout(() => {
-      saveFormData({
-        review: watchedFields.review,
-        rating: watchedFields.rating,
-        service: watchedFields.service,
-        customField: watchedFields.customField,
-      });
+      saveFormData({ review, rating, service: serviceValue, customField });
     }, 500);
-
     return () => clearTimeout(timer);
-  }, [watchedFields]);
+  }, [review, rating, serviceValue, customField]);
 
-  /**
-   * Check if user has permission to submit reviews
-   */
   React.useEffect(() => {
     if (!customerEmail) return;
-
     const checkPermission = async () => {
       const result = await client.fetch(
         QUERY_REVIEW_PERMISSION,
@@ -154,11 +142,9 @@ export const SubmitForm: React.FC<{
       );
       setHasPermission(Boolean(result));
     };
-
     checkPermission();
   }, [customerEmail]);
 
-  // ---------- Helper functions ----------
   const getFileKey = React.useCallback((file: File) => {
     return `${file.name}-${file.size}-${file.lastModified}`;
   }, []);
@@ -190,21 +176,16 @@ export const SubmitForm: React.FC<{
     startTransition(async () => {
       try {
         const files = values.workAssets;
-        // 1. Upload all files to Sanity (only on submit)
         const assetResults: SanityAssetResult[] = [];
         const errors: { file: File; error: Error }[] = [];
         let completed = 0;
         let assetRefs: {
           _key: string;
           _type: "asset";
-          asset: {
-            _type: "reference";
-            _ref: string;
-          };
+          asset: { _type: "reference"; _ref: string };
         }[] = [];
 
         if (files && files.length > 0) {
-          // Show initial loading toast
           toast.loading(`Uploading 0 of ${files.length} files. Please wait..`, {
             id: "file-upload",
           });
@@ -222,7 +203,6 @@ export const SubmitForm: React.FC<{
                 setOverallProgress(
                   Math.round((completed / files.length) * 100),
                 );
-                // Update the toast message
                 toast.loading(
                   `Uploading ${completed} of ${files.length} files...`,
                   {
@@ -236,9 +216,7 @@ export const SubmitForm: React.FC<{
           setOverallProgress(0);
           toast.dismiss("file-upload");
 
-          // 2. Handle upload errors
           if (errors.length > 0) {
-            // Show a single error toast that summarizes failures
             const errorList = errors
               .map(({ file, error }) => `${file.name}: ${error.message}`)
               .join(", ");
@@ -247,7 +225,7 @@ export const SubmitForm: React.FC<{
             );
             return;
           }
-          // 3. Build asset references for the server action
+
           assetRefs = assetResults.map(({ _id }) => ({
             _key: crypto.randomUUID(),
             _type: "asset" as const,
@@ -255,7 +233,6 @@ export const SubmitForm: React.FC<{
           }));
         }
 
-        // 4. Submit the inquiry via server action
         toast.loading("Submitting review. Please wait..", {
           id: "submitting-review",
         });
@@ -275,15 +252,15 @@ export const SubmitForm: React.FC<{
             description: result.message,
           });
         }
-        // Inside startTransition callback after successful submission
+
         localStorage.removeItem(STORAGE_KEY);
-        form.reset();
         form.reset({
           review: "",
           customField: "",
           rating: "",
           service: "",
           workAssets: [],
+          captchaToken: "",
         });
       } catch (error) {
         console.error(error);
@@ -324,9 +301,8 @@ export const SubmitForm: React.FC<{
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="space-y-6"
                   >
-                    {/* Select Fields Container */}
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      {isCustomSelected && (
+                      {isCustomSelected ? (
                         <FormField
                           control={form.control}
                           name="customField"
@@ -357,8 +333,7 @@ export const SubmitForm: React.FC<{
                             </FormItem>
                           )}
                         />
-                      )}
-                      {!isCustomSelected && (
+                      ) : (
                         <FormField
                           control={form.control}
                           name="service"
@@ -380,19 +355,13 @@ export const SubmitForm: React.FC<{
                                     <SelectValue placeholder="Select service" />
                                   </SelectTrigger>
                                 </FormControl>
-
                                 <SelectContent>
-                                  {[
-                                    ...consultations.map((data) => ({
-                                      value: data.title,
-                                      label: data.title,
-                                    })),
-                                  ].map((type) => (
+                                  {consultations.map((data) => (
                                     <SelectItem
-                                      key={type.value}
-                                      value={type.value as string}
+                                      key={data.title}
+                                      value={data.title as string}
                                     >
-                                      {type.label}
+                                      {data.title}
                                     </SelectItem>
                                   ))}
                                   <SelectItem value="custom">Others</SelectItem>
@@ -403,6 +372,7 @@ export const SubmitForm: React.FC<{
                           )}
                         />
                       )}
+
                       <FormField
                         control={form.control}
                         name="rating"
@@ -424,7 +394,6 @@ export const SubmitForm: React.FC<{
                                   <SelectValue placeholder="Select a rating" />
                                 </SelectTrigger>
                               </FormControl>
-
                               <SelectContent>
                                 {[
                                   { value: "5", label: "★★★★★ – Excellent" },
@@ -448,19 +417,16 @@ export const SubmitForm: React.FC<{
                       />
                     </div>
 
-                    {/* Textarea Field */}
                     <FormField
                       control={form.control}
                       name="review"
                       render={({ field }) => {
                         const currentLength = field.value?.length ?? 0;
-
                         return (
                           <FormItem>
                             <FormLabel required currentLength={currentLength}>
                               Write your Testimony
                             </FormLabel>
-
                             <FormControl>
                               <Textarea
                                 {...field}
@@ -474,7 +440,6 @@ export const SubmitForm: React.FC<{
                       }}
                     />
 
-                    {/* File Upload Field */}
                     <FormField
                       control={form.control}
                       name="workAssets"
@@ -500,7 +465,6 @@ export const SubmitForm: React.FC<{
                                     : "",
                                 )}
                               >
-                                {/* dropzone content unchanged */}
                                 <div className="text-muted-foreground flex flex-col items-center gap-1 text-center">
                                   <ImagePlusIcon className="size-8" />
                                   <p className="mt-4 text-sm font-medium">
@@ -509,8 +473,7 @@ export const SubmitForm: React.FC<{
                                   <p className="text-xs">
                                     Or click to browse (max {MAX_FILES_UPLOAD}{" "}
                                     files, up to{" "}
-                                    {MAX_SIZE_UPLOAD / (1024 * 1024)}
-                                    MB each)
+                                    {MAX_SIZE_UPLOAD / (1024 * 1024)}MB each)
                                   </p>
                                 </div>
                               </FileUploadDropzone>
@@ -553,44 +516,61 @@ export const SubmitForm: React.FC<{
                       )}
                     />
 
-                    <div className="relative">
-                      <ClerkLoading>
-                        <Skeleton className="h-14" />
-                      </ClerkLoading>
-                      <ClerkLoaded>
-                        <Show when="signed-in">
-                          <Button
-                            type="submit"
-                            className="w-full"
-                            size="xl"
-                            disabled={isSubmitting || overallProgress > 0}
-                            loadingText={
-                              overallProgress > 0
-                                ? `Uploading files ${overallProgress}%`
-                                : isSubmitting
-                                  ? "Please wait.."
-                                  : undefined
-                            }
-                          >
-                            Submit Review
-                          </Button>
-                        </Show>
-                        <Show when="signed-out" treatPendingAsSignedOut>
-                          <SignInButton
-                            mode="modal"
-                            forceRedirectUrl={pathname}
-                            fallbackRedirectUrl={pathname}
-                            signUpForceRedirectUrl={pathname}
-                            signUpFallbackRedirectUrl={pathname}
-                          >
-                            <Button className="w-full" size="xl" type="button">
-                              <RiUser6Line className="size-4.5" />
-                              <span>Sign in to Submit</span>
+                    <Turnstile
+                      action="review"
+                      disabled={form.formState.isSubmitting || isSubmitting}
+                      onVerify={(token) => form.setValue("captchaToken", token)}
+                      onExpire={() => form.setValue("captchaToken", "")}
+                    />
+
+                    {captchaToken && (
+                      <div className="relative">
+                        <ClerkLoading>
+                          <Skeleton className="h-14" />
+                        </ClerkLoading>
+                        <ClerkLoaded>
+                          <Show when="signed-in">
+                            <Button
+                              type="submit"
+                              className="w-full"
+                              size="xl"
+                              disabled={
+                                !captchaToken ||
+                                isSubmitting ||
+                                overallProgress > 0
+                              }
+                              loadingText={
+                                overallProgress > 0
+                                  ? `Uploading files ${overallProgress}%`
+                                  : isSubmitting
+                                    ? "Please wait.."
+                                    : undefined
+                              }
+                            >
+                              Submit Review
                             </Button>
-                          </SignInButton>
-                        </Show>
-                      </ClerkLoaded>
-                    </div>
+                          </Show>
+                          <Show when="signed-out" treatPendingAsSignedOut>
+                            <SignInButton
+                              mode="modal"
+                              forceRedirectUrl={pathname}
+                              fallbackRedirectUrl={pathname}
+                              signUpForceRedirectUrl={pathname}
+                              signUpFallbackRedirectUrl={pathname}
+                            >
+                              <Button
+                                className="w-full"
+                                size="xl"
+                                type="button"
+                              >
+                                <RiUser6Line className="size-4.5" />
+                                <span>Sign in to Submit</span>
+                              </Button>
+                            </SignInButton>
+                          </Show>
+                        </ClerkLoaded>
+                      </div>
+                    )}
                   </form>
                 </Form>
               </>

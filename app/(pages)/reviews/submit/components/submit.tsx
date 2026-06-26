@@ -7,7 +7,6 @@ import {
   FileUploadItemDelete,
   FileUploadItemMetadata,
   FileUploadItemPreview,
-  FileUploadItemProgress,
   FileUploadList,
 } from "@/components/shadcn/file-upload";
 import {
@@ -34,7 +33,7 @@ import {
 import { Textarea } from "@/components/shadcn/textarea";
 import { Container } from "@/components/shared/container";
 import { siteConfig } from "@/config/site.config";
-import { cn, validateFormSizeOrWarn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   MAX_FILES_UPLOAD,
   MAX_SIZE_UPLOAD,
@@ -44,14 +43,45 @@ import {
 import { QUERY_CONSULTATIONS_RESULT } from "@/sanity.types";
 import { client, clientOptions } from "@/sanity/lib/client";
 import { QUERY_REVIEW_PERMISSION } from "@/sanity/queries/permission.query";
-import { ClerkLoaded, ClerkLoading, useUser } from "@clerk/nextjs";
+import {
+  ClerkLoaded,
+  ClerkLoading,
+  Show,
+  SignInButton,
+  useUser,
+} from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImagePlusIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { useFileUpload } from "@/hooks/use-file-upload";
 import { submitReviewForm } from "@/actions/review.action";
+import { usePathname } from "next/navigation";
+import { SanityAssetResult, uploadFileToSanity } from "@/lib/upload";
+import { Skeleton } from "@/components/shadcn/skeleton";
+import { RiUser6Line } from "react-icons/ri";
+
+const STORAGE_KEY = "reviewFormDraft";
+
+function loadFormData(): Partial<ZSchemaType["review"]> | null {
+  if (typeof window === "undefined") return null; // SSR guard
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (parsed.eventDate) parsed.eventDate = new Date(parsed.eventDate);
+    return parsed;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function saveFormData(data: Partial<ZSchemaType["review"]>) {
+  if (typeof window === "undefined") return; // SSR guard
+  const { workAssets, ...rest } = data;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+}
 
 /**
  * Review submission form component
@@ -59,52 +89,54 @@ import { submitReviewForm } from "@/actions/review.action";
 export const SubmitForm: React.FC<{
   consultations: QUERY_CONSULTATIONS_RESULT;
 }> = ({ consultations }) => {
+  const pathname = usePathname();
+
   // Authentication and user data
   const { user } = useUser();
   const customerEmail =
     user?.primaryEmailAddress?.emailAddress ??
     user?.emailAddresses?.[0]?.emailAddress;
 
-  // UI states
+  // Load saved data (if any) to prefill the form
+  const savedData = loadFormData();
 
   // Form setup
   const form = useForm<ZSchemaType["review"]>({
     resolver: zodResolver(zSchema.review),
     defaultValues: {
-      review: "",
-      rating: "",
-      service: "",
-      customField: "",
+      review: savedData?.review || "",
+      rating: savedData?.rating || "",
+      service: savedData?.service || "",
+      customField: savedData?.customField || "",
       workAssets: [] as File[],
     },
   });
 
-  const {
-    onFileUpload,
-    getFileKey,
-    setFileBlobMap,
-    isFileUploading,
-    fileBlobMap,
-    onFileReject,
-    handleFileValueChange,
-  } = useFileUpload({
-    getFiles: () => form.getValues("workAssets")!,
-    setFiles: (files) =>
-      form.setValue("workAssets", files, { shouldValidate: true }),
-  });
-
   const [isSubmitting, startTransition] = React.useTransition();
+  const [overallProgress, setOverallProgress] = React.useState(0);
   const [isCustomSelected, setIsCustomSelected] = React.useState(false);
   const [hasPermission, setHasPermission] = React.useState(true);
+
+  // ---------- Autosave to localStorage ----------
+  const watchedFields = form.watch();
 
   /**
    * Toggle custom service input
    */
   React.useEffect(() => {
-    // eslint-disable-next-line react-hooks/incompatible-library
-    setIsCustomSelected(form.watch("service") === "custom");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.watch("service")]);
+    setIsCustomSelected(watchedFields.service === "custom");
+    // Save after a short debounce (every 500ms after last change)
+    const timer = setTimeout(() => {
+      saveFormData({
+        review: watchedFields.review,
+        rating: watchedFields.rating,
+        service: watchedFields.service,
+        customField: watchedFields.customField,
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [watchedFields]);
 
   /**
    * Check if user has permission to submit reviews
@@ -124,6 +156,27 @@ export const SubmitForm: React.FC<{
     checkPermission();
   }, [customerEmail]);
 
+  // ---------- Helper functions ----------
+  const getFileKey = React.useCallback((file: File) => {
+    return `${file.name}-${file.size}-${file.lastModified}`;
+  }, []);
+
+  const onFileReject = React.useCallback((file: File, message: string) => {
+    const truncatedName =
+      file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name;
+    toast.warning(message, {
+      description: `"${truncatedName}" has been rejected`,
+      duration: 8000,
+    });
+  }, []);
+
+  const handleFileValueChange = React.useCallback(
+    (newFiles: File[]) => {
+      form.setValue("workAssets", newFiles, { shouldValidate: true });
+    },
+    [form],
+  );
+
   async function onSubmit(values: ZSchemaType["review"]) {
     if (!hasPermission) {
       toast.info("Permission needed!", {
@@ -132,20 +185,80 @@ export const SubmitForm: React.FC<{
       return;
     }
 
-    let fileUrls: string[];
-    if (values.workAssets && values.workAssets.length > 0) {
-      // Collect blob URLs from state
-      fileUrls = values.workAssets
-        .map((file) => fileBlobMap[getFileKey(file)]?.url)
-        .filter(Boolean) as string[];
-    }
-
-    toast.loading("Submitting review. Please wait..", {
-      id: "submitting-review",
-    });
     startTransition(async () => {
       try {
-        const result = await submitReviewForm(values, fileUrls);
+        const files = values.workAssets;
+        // 1. Upload all files to Sanity (only on submit)
+        const assetResults: SanityAssetResult[] = [];
+        const errors: { file: File; error: Error }[] = [];
+        let completed = 0;
+        let assetRefs: {
+          _key: string;
+          _type: "asset";
+          asset: {
+            _type: "reference";
+            _ref: string;
+          };
+        }[] = [];
+
+        if (files && files.length > 0) {
+          // Show initial loading toast
+          toast.loading(`Uploading 0 of ${files.length} files. Please wait..`, {
+            id: "file-upload",
+          });
+
+          const uploadPromises = files.map((file) =>
+            uploadFileToSanity(file)
+              .then((result) => {
+                assetResults.push(result);
+              })
+              .catch((error) => {
+                errors.push({ file, error });
+              })
+              .finally(() => {
+                completed++;
+                setOverallProgress(
+                  Math.round((completed / files.length) * 100),
+                );
+                // Update the toast message
+                toast.loading(
+                  `Uploading ${completed} of ${files.length} files...`,
+                  {
+                    id: "file-upload",
+                  },
+                );
+              }),
+          );
+
+          await Promise.all(uploadPromises);
+          setOverallProgress(0);
+          toast.dismiss("file-upload");
+
+          // 2. Handle upload errors
+          if (errors.length > 0) {
+            // Show a single error toast that summarizes failures
+            const errorList = errors
+              .map(({ file, error }) => `${file.name}: ${error.message}`)
+              .join(", ");
+            toast.error(
+              `Failed to upload ${errors.length} file(s): ${errorList}`,
+            );
+            return;
+          }
+          // 3. Build asset references for the server action
+          assetRefs = assetResults.map(({ _id }) => ({
+            _key: crypto.randomUUID(),
+            _type: "asset" as const,
+            asset: { _type: "reference" as const, _ref: _id },
+          }));
+        }
+
+        // 4. Submit the inquiry via server action
+        toast.loading("Submitting review. Please wait..", {
+          id: "submitting-review",
+        });
+
+        const result = await submitReviewForm(values, assetRefs);
         if (!result.success) throw new Error(result.message);
 
         if (result.resendError) {
@@ -160,8 +273,16 @@ export const SubmitForm: React.FC<{
             description: result.message,
           });
         }
+        // Inside startTransition callback after successful submission
+        localStorage.removeItem(STORAGE_KEY);
         form.reset();
-        setFileBlobMap({});
+        form.reset({
+          review: "",
+          customField: "",
+          rating: "",
+          service: "",
+          workAssets: [],
+        });
       } catch (error) {
         console.error(error);
         toast.error("An unexpected error occurred", {
@@ -366,7 +487,6 @@ export const SubmitForm: React.FC<{
                               maxFiles={MAX_FILES_UPLOAD}
                               maxSize={MAX_SIZE_UPLOAD}
                               onFileReject={onFileReject}
-                              onUpload={onFileUpload}
                               multiple
                             >
                               <FileUploadDropzone
@@ -394,7 +514,7 @@ export const SubmitForm: React.FC<{
                               </FileUploadDropzone>
                               <FileUploadList className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {field?.value?.map((file) => {
-                                  const key = getFileKey(file); // use the stable key
+                                  const key = getFileKey(file);
                                   return (
                                     <FileUploadItem
                                       key={key}
@@ -404,20 +524,15 @@ export const SubmitForm: React.FC<{
                                       <div className="flex w-full items-center gap-2">
                                         <FileUploadItemPreview />
                                         <FileUploadItemMetadata size="sm" />
-                                        <FileUploadItemProgress variant="fill" />
                                         {!isSubmitting && (
                                           <FileUploadItemDelete
                                             asChild
-                                            disabled={
-                                              isSubmitting || isFileUploading
-                                            }
+                                            disabled={isSubmitting}
                                           >
                                             <Button
                                               variant="destructive"
                                               size="icon-xs"
-                                              disabled={
-                                                isSubmitting || isFileUploading
-                                              }
+                                              disabled={isSubmitting}
                                               className="md:opacity-30 md:pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100"
                                             >
                                               <XIcon />
@@ -436,14 +551,44 @@ export const SubmitForm: React.FC<{
                       )}
                     />
 
-                    <Button
-                      size="xl"
-                      isLoading={isSubmitting}
-                      loadingText="Please wait..."
-                      className="w-full"
-                    >
-                      Submit Review
-                    </Button>
+                    <div className="relative">
+                      <ClerkLoading>
+                        <Skeleton className="h-14" />
+                      </ClerkLoading>
+                      <ClerkLoaded>
+                        <Show when="signed-in">
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            size="xl"
+                            disabled={isSubmitting || overallProgress > 0}
+                            loadingText={
+                              overallProgress > 0
+                                ? `Uploading files ${overallProgress}%`
+                                : isSubmitting
+                                  ? "Please wait.."
+                                  : undefined
+                            }
+                          >
+                            Submit Review
+                          </Button>
+                        </Show>
+                        <Show when="signed-out" treatPendingAsSignedOut>
+                          <SignInButton
+                            mode="modal"
+                            forceRedirectUrl={pathname}
+                            fallbackRedirectUrl={pathname}
+                            signUpForceRedirectUrl={pathname}
+                            signUpFallbackRedirectUrl={pathname}
+                          >
+                            <Button className="w-full" size="xl" type="button">
+                              <RiUser6Line className="size-4.5" />
+                              <span>Sign in to Submit</span>
+                            </Button>
+                          </SignInButton>
+                        </Show>
+                      </ClerkLoaded>
+                    </div>
                   </form>
                 </Form>
               </>

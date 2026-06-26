@@ -6,16 +6,15 @@ export const client = createClient({
   projectId,
   dataset,
   apiVersion,
-  useCdn: false, // Set to false if statically generating pages, using ISR or tag-based revalidation
+  useCdn: false,
   perspective: "published",
-  token: process.env.SANITY_API_READ_TOKEN,
 });
 
 export const writeClient = createClient({
   projectId,
   dataset,
   apiVersion,
-  useCdn: false, // Set to false if statically generating pages, using ISR or tag-based revalidation
+  useCdn: false,
   token: process.env.SANITY_API_WRITE_TOKEN,
 });
 

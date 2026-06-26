@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -38,7 +38,6 @@ import {
   FileUploadItemDelete,
   FileUploadItemMetadata,
   FileUploadItemPreview,
-  FileUploadItemProgress,
   FileUploadList,
 } from "@/components/shadcn/file-upload";
 import { toast } from "sonner";
@@ -46,65 +45,166 @@ import { cn } from "@/lib/utils";
 import { ImagePlusIcon, XIcon } from "lucide-react";
 import { Textarea } from "@/components/shadcn/textarea";
 import { submitInquiryForm } from "@/actions/inquiry.action";
-import { useFileUpload } from "@/hooks/use-file-upload";
+import { uploadFileToSanity, SanityAssetResult } from "@/lib/upload";
+import { ClerkLoaded, ClerkLoading, Show, SignInButton } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
+import { RiUser6Line } from "react-icons/ri";
+import { Skeleton } from "@/components/shadcn/skeleton";
+
+const STORAGE_KEY = "inquiryFormDraft";
+
+function loadFormData(): Partial<ZSchemaType["inquiry"]> | null {
+  if (typeof window === "undefined") return null; // SSR guard
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (parsed.eventDate) parsed.eventDate = new Date(parsed.eventDate);
+    return parsed;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function saveFormData(data: Partial<ZSchemaType["inquiry"]>) {
+  if (typeof window === "undefined") return; // SSR guard
+  const { inspirationPhotos, ...rest } = data;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+}
 
 export const SubmitForm = () => {
+  const pathname = usePathname();
+  const savedData = loadFormData();
+
   const form = useForm<ZSchemaType["inquiry"]>({
     resolver: zodResolver(zSchema.inquiry),
     defaultValues: {
-      fullName: "",
-      email: "",
-      phone: "",
-      eventType: "",
-      eventDate: undefined,
-      budget: undefined,
-      dreamDress: "",
-      inspirationPhotos: [] as File[],
+      fullName: savedData?.fullName || "",
+      email: savedData?.email || "",
+      phone: savedData?.phone || "",
+      eventType: savedData?.eventType || "",
+      eventDate: savedData?.eventDate || undefined,
+      budget: savedData?.budget || undefined,
+      dreamDress: savedData?.dreamDress || "",
+      inspirationPhotos: [], // always start empty
     },
   });
 
-  const {
-    onFileUpload,
-    getFileKey,
-    setFileBlobMap,
-    isFileUploading,
-    fileBlobMap,
-    onFileReject,
-    handleFileValueChange,
-  } = useFileUpload({
-    getFiles: () => form.getValues("inspirationPhotos"),
-    setFiles: (files) =>
-      form.setValue("inspirationPhotos", files, { shouldValidate: true }),
-  });
-
   const [isSubmitting, startTransition] = React.useTransition();
+  const [overallProgress, setOverallProgress] = React.useState(0);
 
-  // ---- MODIFIED onSubmit: sends blob URLs instead of raw files ----
-  async function onSubmit(values: ZSchemaType["inquiry"]) {
-    // Prevent submission while uploads are still in progress
-    if (isFileUploading) {
-      toast.error("Please wait for file uploads to finish.");
-      return;
-    }
+  // ---------- Autosave to localStorage ----------
+  const watchedFields = form.watch();
 
-    // Collect blob URLs from state
-    const fileUrls = values.inspirationPhotos
-      .map((file) => fileBlobMap[getFileKey(file)]?.url)
-      .filter(Boolean) as string[];
+  useEffect(() => {
+    // Save after a short debounce (every 500ms after last change)
+    const timer = setTimeout(() => {
+      saveFormData({
+        fullName: watchedFields.fullName,
+        email: watchedFields.email,
+        phone: watchedFields.phone,
+        eventType: watchedFields.eventType,
+        eventDate: watchedFields.eventDate,
+        budget: watchedFields.budget,
+        dreamDress: watchedFields.dreamDress,
+      });
+    }, 500);
 
-    toast.loading("Submitting inquiry. Please wait...", {
-      id: "submitting-inquiry",
+    return () => clearTimeout(timer);
+  }, [watchedFields]);
+
+  // ---------- Helper functions ----------
+  const getFileKey = React.useCallback((file: File) => {
+    return `${file.name}-${file.size}-${file.lastModified}`;
+  }, []);
+
+  const onFileReject = React.useCallback((file: File, message: string) => {
+    const truncatedName =
+      file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name;
+    toast.warning(message, {
+      description: `"${truncatedName}" has been rejected`,
+      duration: 8000,
     });
+  }, []);
 
+  const handleFileValueChange = React.useCallback(
+    (newFiles: File[]) => {
+      form.setValue("inspirationPhotos", newFiles, { shouldValidate: true });
+    },
+    [form],
+  );
+
+  // ---------- Submission logic ----------
+  async function onSubmit(values: ZSchemaType["inquiry"]) {
     startTransition(async () => {
       try {
-        const result = await submitInquiryForm(values, fileUrls);
+        const files = values.inspirationPhotos;
+
+        // 1. Upload all files to Sanity (only on submit)
+        const assetResults: SanityAssetResult[] = [];
+        const errors: { file: File; error: Error }[] = [];
+        let completed = 0;
+
+        // Show initial loading toast
+        toast.loading(`Uploading 0 of ${files.length} files. Please wait..`, {
+          id: "file-upload",
+        });
+
+        const uploadPromises = files.map((file) =>
+          uploadFileToSanity(file)
+            .then((result) => {
+              assetResults.push(result);
+            })
+            .catch((error) => {
+              errors.push({ file, error });
+            })
+            .finally(() => {
+              completed++;
+              setOverallProgress(Math.round((completed / files.length) * 100));
+              // Update the toast message
+              toast.loading(
+                `Uploading ${completed} of ${files.length} files...`,
+                {
+                  id: "file-upload",
+                },
+              );
+            }),
+        );
+
+        await Promise.all(uploadPromises);
+        setOverallProgress(0);
+        toast.dismiss("file-upload");
+
+        // 2. Handle upload errors
+        if (errors.length > 0) {
+          // Show a single error toast that summarizes failures
+          const errorList = errors
+            .map(({ file, error }) => `${file.name}: ${error.message}`)
+            .join(", ");
+          toast.error(
+            `Failed to upload ${errors.length} file(s): ${errorList}`,
+          );
+          return;
+        }
+        // 3. Build asset references for the server action
+        const assetRefs = assetResults.map(({ _id }) => ({
+          _key: crypto.randomUUID(),
+          _type: "asset" as const,
+          asset: { _type: "reference" as const, _ref: _id },
+        }));
+
+        // 4. Submit the inquiry via server action
+        toast.loading("Submitting inquiry...", { id: "submitting-inquiry" });
+        const result = await submitInquiryForm(values, assetRefs);
         if (!result.success) throw new Error(result.message);
+
+        toast.dismiss("submitting-inquiry");
 
         if (result.resendError) {
           toast.warning("Inquiry submitted successfully!", {
             description:
-              "Your review was submitted and is awaiting approval, but we couldn't notify the admin automatically.",
+              "Your inquiry was submitted, but we couldn't notify the admin automatically.",
             duration: Infinity,
             closeButton: true,
           });
@@ -114,18 +214,27 @@ export const SubmitForm = () => {
           });
         }
 
+        // Inside startTransition callback after successful submission
+        localStorage.removeItem(STORAGE_KEY);
         form.reset();
-        setFileBlobMap({});
-      } catch (error) {
-        console.error(error);
-        toast.error("An unexpected error occurred", {
-          description:
-            error instanceof Error ? error.message : "Please try again",
-          duration: Infinity,
-          closeButton: true,
+        form.reset({
+          fullName: "",
+          email: "",
+          phone: "",
+          eventType: "",
+          eventDate: undefined,
+          budget: undefined,
+          dreamDress: "",
+          inspirationPhotos: [],
         });
-      } finally {
+      } catch (error) {
         toast.dismiss("submitting-inquiry");
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+          { duration: Infinity, closeButton: true },
+        );
       }
     });
   }
@@ -138,7 +247,7 @@ export const SubmitForm = () => {
             Tell Us About Your Vision
           </h2>
           <p className="text-muted-foreground mb-8 text-sm font-normal">
-            Fill out the form below and you&apos;ll get a response email withing
+            Fill out the form below and you&apos;ll get a response email within
             24-48 hours
           </p>
 
@@ -298,7 +407,7 @@ export const SubmitForm = () => {
                 )}
               />
 
-              {/* Inspiration Photos – modified to use our custom onChange */}
+              {/* Inspiration Photos – no onUpload, upload happens on submit */}
               <FormField
                 control={form.control}
                 name="inspirationPhotos"
@@ -313,7 +422,6 @@ export const SubmitForm = () => {
                         maxFiles={MAX_FILES_UPLOAD}
                         maxSize={MAX_SIZE_UPLOAD}
                         onFileReject={onFileReject}
-                        onUpload={onFileUpload}
                         multiple
                       >
                         <FileUploadDropzone
@@ -325,7 +433,6 @@ export const SubmitForm = () => {
                               : "",
                           )}
                         >
-                          {/* dropzone content unchanged */}
                           <div className="text-muted-foreground flex flex-col items-center gap-1 text-center">
                             <ImagePlusIcon className="size-8" />
                             <p className="mt-4 text-sm font-medium">
@@ -340,7 +447,7 @@ export const SubmitForm = () => {
                         </FileUploadDropzone>
                         <FileUploadList className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {field?.value?.map((file) => {
-                            const key = getFileKey(file); // use the stable key
+                            const key = getFileKey(file);
                             return (
                               <FileUploadItem
                                 key={key}
@@ -350,18 +457,15 @@ export const SubmitForm = () => {
                                 <div className="flex w-full items-center gap-2">
                                   <FileUploadItemPreview />
                                   <FileUploadItemMetadata size="sm" />
-                                  <FileUploadItemProgress variant="fill" />
                                   {!isSubmitting && (
                                     <FileUploadItemDelete
                                       asChild
-                                      disabled={isSubmitting || isFileUploading}
+                                      disabled={isSubmitting}
                                     >
                                       <Button
                                         variant="destructive"
                                         size="icon-xs"
-                                        disabled={
-                                          isSubmitting || isFileUploading
-                                        }
+                                        disabled={isSubmitting}
                                         className="md:opacity-30 md:pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100"
                                       >
                                         <XIcon />
@@ -386,7 +490,6 @@ export const SubmitForm = () => {
                 name="dreamDress"
                 render={({ field }) => {
                   const currentLength = field.value?.length ?? 0;
-
                   return (
                     <FormItem>
                       <FormLabel required currentLength={currentLength}>
@@ -405,16 +508,42 @@ export const SubmitForm = () => {
                 }}
               />
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="xl"
-                isLoading={isSubmitting}
-                loadingText="Submitting..."
-                disabled={isFileUploading || isSubmitting}
-              >
-                Submit Inquiry
-              </Button>
+              <div className="relative">
+                <ClerkLoading>
+                  <Skeleton className="h-14" />
+                </ClerkLoading>
+                <ClerkLoaded>
+                  <Show when="signed-in">
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      size="xl"
+                      disabled={isSubmitting || overallProgress > 0}
+                      loadingText={
+                        overallProgress > 0
+                          ? `Uploading files ${overallProgress}%`
+                          : "Please wait.."
+                      }
+                    >
+                      Submit Inquiry
+                    </Button>
+                  </Show>
+                  <Show when="signed-out" treatPendingAsSignedOut>
+                    <SignInButton
+                      mode="modal"
+                      forceRedirectUrl={pathname}
+                      fallbackRedirectUrl={pathname}
+                      signUpForceRedirectUrl={pathname}
+                      signUpFallbackRedirectUrl={pathname}
+                    >
+                      <Button className="w-full" size="xl" type="button">
+                        <RiUser6Line className="size-4.5" />
+                        <span>Sign in to Submit</span>
+                      </Button>
+                    </SignInButton>
+                  </Show>
+                </ClerkLoaded>
+              </div>
             </form>
           </Form>
         </div>

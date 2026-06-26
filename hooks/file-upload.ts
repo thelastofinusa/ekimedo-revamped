@@ -1,11 +1,14 @@
-// hooks/use-file-upload.ts
 "use client";
 
 import React from "react";
 import { toast } from "sonner";
-import { PutBlobResult } from "@vercel/blob";
 
-// Minimal form interface – accepts any react‑hook‑form instance
+// New type for the asset data we store
+interface SanityAssetResult {
+  _id: string;
+  url: string;
+}
+
 interface FileFieldAccessors {
   getFiles: () => File[];
   setFiles: (files: File[]) => void;
@@ -13,17 +16,17 @@ interface FileFieldAccessors {
 
 export function useFileUpload(config?: FileFieldAccessors) {
   const [isFileUploading, setIsFileUploading] = React.useState(false);
-  const [fileBlobMap, setFileBlobMap] = React.useState<
-    Record<string, PutBlobResult>
+  const [fileAssetMap, setFileAssetMap] = React.useState<
+    Record<string, SanityAssetResult>
   >({});
 
   const getFileKey = React.useCallback((file: File) => {
     return `${file.name}-${file.size}-${file.lastModified}`;
   }, []);
 
-  /**
-   * Actual upload logic – calls `/api/upload/presigned` for each file.
-   */
+  // ------------------------------------------------------------------
+  //  Direct Sanity upload with progress
+  // ------------------------------------------------------------------
   const onFileUpload = React.useCallback(
     async (
       files: File[],
@@ -37,15 +40,15 @@ export function useFileUpload(config?: FileFieldAccessors) {
         onError: (file: File, error: Error) => void;
       },
     ) => {
-      // --- helper: upload a single file via XHR, resolve on success, reject on error ---
+      // helper: upload a single file to Sanity's asset API
       const uploadSingleFile = (file: File): Promise<void> =>
         new Promise<void>((resolve, reject) => {
           const key = getFileKey(file);
           const xhr = new XMLHttpRequest();
           const formData = new FormData();
           formData.append("file", file);
-          formData.append("formType", "inquiry");
 
+          // Progress
           xhr.upload.addEventListener("progress", (event) => {
             if (event.lengthComputable) {
               const percent = Math.round((event.loaded / event.total) * 100);
@@ -53,15 +56,17 @@ export function useFileUpload(config?: FileFieldAccessors) {
             }
           });
 
+          // Success
           xhr.addEventListener("load", () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               try {
-                const blobResult = JSON.parse(
-                  xhr.responseText,
-                ) as PutBlobResult;
+                const json = JSON.parse(xhr.responseText);
+                const asset: SanityAssetResult = {
+                  _id: json._id,
+                  url: json.url,
+                };
                 onProgress(file, 100);
-                // store blob result immediately
-                setFileBlobMap((prev) => ({ ...prev, [key]: blobResult }));
+                setFileAssetMap((prev) => ({ ...prev, [key]: asset }));
                 resolve();
               } catch (err) {
                 reject(
@@ -88,22 +93,23 @@ export function useFileUpload(config?: FileFieldAccessors) {
             reject(new Error(`Upload aborted for ${file.name}`)),
           );
 
-          xhr.open("POST", "/api/upload/presigned");
+          // inside uploadSingleFile:
+          xhr.open("POST", "/api/upload/sanity");
+          // No Authorization header needed – the cookie session authenticates you
           xhr.send(formData);
         });
 
-      // --- main upload flow ---
+      // --- main upload flow (unchanged) ---
       setIsFileUploading(true);
       toast.loading("Uploading files. Please wait…", {
         id: "uploading-assets",
       });
 
-      // Execute all uploads in parallel but capture individual results
       const results = await Promise.all(
         files.map(async (file) => {
           try {
             await uploadSingleFile(file);
-            onSuccess(file); // notify the FileUpload component
+            onSuccess(file);
             return { status: "success" as const, file };
           } catch (error) {
             const err =
@@ -116,7 +122,6 @@ export function useFileUpload(config?: FileFieldAccessors) {
 
       setIsFileUploading(false);
 
-      // --- toast summary ---
       const succeeded = results.filter((r) => r.status === "success").length;
       const failed = results.filter((r) => r.status === "error").length;
 
@@ -143,9 +148,7 @@ export function useFileUpload(config?: FileFieldAccessors) {
     [getFileKey],
   );
 
-  /**
-   * Handle file rejection – shows a toast.
-   */
+  // onFileReject remains identical
   const onFileReject = React.useCallback((file: File, message: string) => {
     const truncatedName =
       file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name;
@@ -155,19 +158,17 @@ export function useFileUpload(config?: FileFieldAccessors) {
     });
   }, []);
 
-  /**
-   * Custom onChange for the file field – cleans up blob URLs when files are removed.
-   */
+  // handleFileValueChange – cleans up asset map when files are removed
   const handleFileValueChange = React.useCallback(
     (newFiles: File[]) => {
-      if (!config) return; // no config attached – nothing to sync
+      if (!config) return;
       const currentFiles = config.getFiles();
       if (currentFiles) {
         const removed = currentFiles.filter(
           (f: File) => !newFiles.find((nf) => getFileKey(nf) === getFileKey(f)),
         );
         if (removed.length > 0) {
-          setFileBlobMap((prev) => {
+          setFileAssetMap((prev) => {
             const updated = { ...prev };
             removed.forEach((file: File) => {
               delete updated[getFileKey(file)];
@@ -178,14 +179,14 @@ export function useFileUpload(config?: FileFieldAccessors) {
       }
       config.setFiles(newFiles);
     },
-    [config, getFileKey, setFileBlobMap],
+    [config, getFileKey],
   );
 
   return {
     onFileUpload,
     isFileUploading,
-    fileBlobMap,
-    setFileBlobMap,
+    fileAssetMap, // renamed from fileBlobMap
+    setFileAssetMap,
     getFileKey,
     onFileReject,
     handleFileValueChange,

@@ -10,15 +10,22 @@ import { randomUUID } from "crypto";
 
 export async function submitReviewForm(
   formData: ZSchemaType["review"],
-  blobUrls?: string[],
+  assetRefs: {
+    _key: string;
+    _type: "asset";
+    asset: { _type: "reference"; _ref: string };
+  }[],
 ) {
   const { userId } = await auth();
   const user = await currentUser();
-  if (!userId || !user) throw new Error("Unauthorized");
+  if (!userId || !user) {
+    return {
+      success: false,
+      message: "You must be logged in to submit an inquiry.",
+    };
+  }
 
-  const resend = getResend();
   const validation = zSchema.review.safeParse(formData);
-
   if (!validation.success) {
     return {
       success: false,
@@ -28,60 +35,10 @@ export async function submitReviewForm(
     };
   }
 
-  const {
-    rating,
-    review,
-    service: serviceRaw,
-    customField,
-    workAssets,
-  } = validation.data;
+  const { rating, review, service: serviceRaw, customField } = validation.data;
   const service = serviceRaw === "custom" ? customField?.trim() : serviceRaw;
 
   try {
-    const uploadedAssets: {
-      _key: string;
-      _type: string;
-      asset: {
-        _type: string;
-        _ref: string;
-      };
-    }[] = [];
-    const uploadedAssetsUrls: string[] = [];
-
-    if (
-      workAssets &&
-      workAssets.length > 0 &&
-      blobUrls &&
-      blobUrls.length > 0
-    ) {
-      await Promise.all(
-        blobUrls.map(async (blobUrl) => {
-          // Fetch the file from Blob
-          const response = await fetch(blobUrl);
-          const buffer = await response.arrayBuffer();
-
-          // Upload to Sanity
-          const sanityAsset = await writeClient.assets.upload(
-            "image",
-            Buffer.from(buffer),
-            {
-              filename: blobUrl.split("/").pop(),
-            },
-          );
-
-          uploadedAssets.push({
-            _key: randomUUID(),
-            _type: "asset",
-            asset: {
-              _type: "reference",
-              _ref: sanityAsset._id,
-            },
-          });
-          uploadedAssetsUrls.push(sanityAsset.url);
-        }),
-      );
-    }
-
     let avatarAsset = null;
     if (user.imageUrl) {
       try {
@@ -121,8 +78,21 @@ export async function submitReviewForm(
             },
           }
         : undefined,
-      workAssets: uploadedAssets.length > 0 ? uploadedAssets : undefined,
+      workAssets: assetRefs.length > 0 ? assetRefs : undefined,
     });
+
+    // 2. Fetch image URLs for the notification email
+    const imageIds = assetRefs.map((ref) => ref.asset._ref);
+    const imageUrls: string[] = [];
+    if (imageIds.length > 0) {
+      const docs = await client.fetch<{ url: string }[]>(
+        `*[_id in $ids]{url}`,
+        { ids: imageIds },
+      );
+      imageUrls.push(...docs.map((d) => d.url));
+    }
+
+    const resend = getResend();
     const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);
 
     const { error } = await resend.emails.send({
@@ -135,7 +105,7 @@ export async function submitReviewForm(
         rating: Number(updatedReview.rating),
         testimonialId: updatedReview._id,
         review: updatedReview.review,
-        images: uploadedAssetsUrls,
+        images: imageUrls,
         socialHandles: socialHandles,
       }),
     });

@@ -7,20 +7,31 @@ import { getResend } from "@/lib/resend";
 import { zSchema, ZSchemaType } from "@/lib/zod";
 import { client, writeClient } from "@/sanity/lib/client";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
-import { del } from "@vercel/blob";
-import { randomUUID } from "crypto";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export async function submitInquiryForm(
   formData: ZSchemaType["inquiry"],
-  blobUrls: string[],
+  assetRefs: {
+    _key: string;
+    _type: "asset";
+    asset: { _type: "reference"; _ref: string };
+  }[],
 ) {
-  const resend = getResend();
-
-  const validation = zSchema.inquiry.safeParse(formData);
-  if (!validation.success && blobUrls.length <= 0) {
+  const { userId } = await auth();
+  const user = await currentUser();
+  if (!userId || !user) {
     return {
       success: false,
-      message: "Invalid form data",
+      message: "You must be logged in to submit an inquiry.",
+    };
+  }
+
+  const validation = zSchema.inquiry.safeParse(formData);
+  if (!validation.success) {
+    return {
+      success: false,
+      message:
+        validation.error.message ?? "Missing or invalid required fields.",
       details: validation.error.flatten(),
     };
   }
@@ -29,47 +40,7 @@ export async function submitInquiryForm(
     validation.data!;
 
   try {
-    const uploadedAssets: {
-      _key: string;
-      _type: string;
-      asset: {
-        _type: string;
-        _ref: string;
-      };
-    }[] = [];
-    const uploadedAssetsUrls: string[] = [];
-
-    // 1. Download files from Blob and upload to Sanity
-    if (blobUrls && blobUrls.length > 0) {
-      await Promise.all(
-        blobUrls.map(async (blobUrl) => {
-          // Fetch the file from Blob
-          const response = await fetch(blobUrl);
-          const buffer = await response.arrayBuffer();
-
-          // Upload to Sanity
-          const sanityAsset = await writeClient.assets.upload(
-            "image",
-            Buffer.from(buffer),
-            {
-              filename: blobUrl.split("/").pop(),
-            },
-          );
-
-          uploadedAssets.push({
-            _key: randomUUID(),
-            _type: "asset",
-            asset: {
-              _type: "reference",
-              _ref: sanityAsset._id,
-            },
-          });
-          uploadedAssetsUrls.push(sanityAsset.url);
-        }),
-      );
-    }
-
-    // 2.  Create inquiry document in Sanity
+    // 1. Create inquiry document (no need to upload files again)
     const inquiry = await writeClient.create({
       _type: "inquiry",
       fullName,
@@ -79,16 +50,22 @@ export async function submitInquiryForm(
       eventDate: eventDate.toISOString().split("T")[0], // YYYY-MM-DD
       budget: budget.toString(),
       dreamDress,
-      inspirationPhotos: uploadedAssets,
+      inspirationPhotos: assetRefs,
       status: "pending",
     });
 
-    // 3. Delete files from Vercel Blob if inquiry has been created
-    if (inquiry._id) {
-      await Promise.all(blobUrls.map((url) => del(url)));
+    // 2. Fetch image URLs for the notification email
+    const imageIds = assetRefs.map((ref) => ref.asset._ref);
+    const imageUrls: string[] = [];
+    if (imageIds.length > 0) {
+      const docs = await client.fetch<{ url: string }[]>(
+        `*[_id in $ids]{url}`,
+        { ids: imageIds },
+      );
+      imageUrls.push(...docs.map((d) => d.url));
     }
 
-    // 4. Format date for email display
+    // 3. Format date for email display
     const eventTypeLabel = EVENT_TYPES_KEYS[eventType] || eventType;
     const eventDateFormatted = new Date(eventDate).toLocaleDateString("en-US", {
       weekday: "long",
@@ -97,6 +74,8 @@ export async function submitInquiryForm(
       day: "numeric",
     });
 
+    // 4. Send email
+    const resend = getResend();
     const socialHandles = await client.fetch(QUERY_SOCIAL_HANDLES);
 
     const { error } = await resend.emails.send({
@@ -111,7 +90,7 @@ export async function submitInquiryForm(
         eventDate: eventDateFormatted,
         budget,
         dreamDress,
-        inspirationPhotos: uploadedAssetsUrls,
+        inspirationPhotos: imageUrls,
         inquiryId: inquiry._id,
         socialHandles,
       }),

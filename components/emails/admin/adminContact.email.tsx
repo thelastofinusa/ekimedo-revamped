@@ -1,7 +1,7 @@
 import { EmailLayout } from "@/components/shared/emailLayout";
 import { siteConfig } from "@/config/site.config";
 import { QUERY_SOCIAL_HANDLES_RESULT } from "@/sanity.types";
-import { Button, Hr, Link, Text } from "@react-email/components";
+import { Button, Link, Text } from "@react-email/components";
 
 export const AdminContactEmail = (props: {
   fName: string;

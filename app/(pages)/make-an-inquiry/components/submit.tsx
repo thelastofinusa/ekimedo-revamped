@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -69,6 +70,7 @@ function loadFormData(): Partial<ZSchemaType["inquiry"]> | null {
 
 function saveFormData(data: Partial<ZSchemaType["inquiry"]>) {
   if (typeof window === "undefined") return; // SSR guard
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { inspirationPhotos, ...rest } = data;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
 }

@@ -6,7 +6,6 @@ import { zSchema, ZSchemaType } from "@/lib/zod";
 import { client, writeClient } from "@/sanity/lib/client";
 import { QUERY_SOCIAL_HANDLES } from "@/sanity/queries/social.query";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { randomUUID } from "crypto";
 
 export async function submitReviewForm(
   formData: ZSchemaType["review"],

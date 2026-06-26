@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 
 import { client } from "@/sanity/lib/client";
 import { QUERY_PRODUCT_BY_IDS } from "@/sanity/queries/product.query";
@@ -39,7 +39,7 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
   );
 
   // Refetch function (exposed to the user)
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     if (items.length === 0) {
       if (isMounted.current) {
         setStockMap(new Map());
@@ -98,7 +98,7 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
         setIsLoading(false);
       }
     }
-  };
+  }, [items, productIds]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -108,7 +108,7 @@ export function useCartStock(items: CartItem[]): UseCartStockReturn {
     return () => {
       isMounted.current = false;
     };
-  }, [items, productIds]);
+  }, [items, productIds, refetch]);
 
   const hasStockIssues = Array.from(stockMap.values()).some(
     (info) => info.isOutOfStock || info.exceedsStock,

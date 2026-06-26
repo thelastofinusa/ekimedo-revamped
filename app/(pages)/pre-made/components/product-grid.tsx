@@ -2,15 +2,7 @@
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
 
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/shadcn/empty";
 import { ProductCard } from "@/components/shared/productCard";
-import { BsInbox } from "react-icons/bs";
 import {
   Pagination,
   PaginationContent,

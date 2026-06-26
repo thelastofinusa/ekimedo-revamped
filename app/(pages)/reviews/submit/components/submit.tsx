@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 import { Button } from "@/components/shadcn/button";
 import {
@@ -79,6 +80,7 @@ function loadFormData(): Partial<ZSchemaType["review"]> | null {
 
 function saveFormData(data: Partial<ZSchemaType["review"]>) {
   if (typeof window === "undefined") return; // SSR guard
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { workAssets, ...rest } = data;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
 }

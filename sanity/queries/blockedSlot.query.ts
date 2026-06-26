@@ -13,7 +13,15 @@ export const QUERY_BLOCKED_SLOTS = defineQuery(`
 `);
 
 export const QUERY_BOOKINGS_FOR_DATE = defineQuery(`
-  *[_type == "booking" && consultation._ref == $consultationId && dateTime >= $start && dateTime < $end] {
-    dateTime
+  *[
+    _type == "booking" &&
+    dateTime >= $start &&
+    dateTime < $end &&
+    (!defined(status) || status != "cancelled")
+  ] {
+    dateTime,
+    consultation->{
+      duration
+    }
   }
 `);

@@ -7,10 +7,7 @@ import { QUERY_PRODUCT_BY_IDS } from "@/sanity/queries/product.query";
 import { Order, QUERY_PRODUCT_BY_IDS_RESULT } from "@/sanity.types";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getStripe } from "@/lib/stripe";
-import { getResend } from "@/lib/resend";
 import { siteConfig } from "@/config/site.config";
-import { redirect } from "next/navigation";
-import { Route } from "next";
 import { SanityDocument } from "next-sanity";
 
 const MINIMUM_ORDER_AMOUNT = 0.5;

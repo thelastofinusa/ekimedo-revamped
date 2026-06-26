@@ -61,14 +61,6 @@ export const Footer: React.FC<{
   initialHours: QUERY_BUSINESS_HOURS_RESULT;
   socialHandles: QUERY_SOCIAL_HANDLES_RESULT;
 }> = ({ initialHours, socialHandles }) => {
-  const [_now, setNow] = React.useState(new Date());
-
-  // Update the 'now' state every 60 seconds
-  React.useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 200);
-    return () => clearInterval(timer);
-  }, []);
-
   const sortedHours =
     initialHours?.hours?.sort(
       (a, b) => DAYS.indexOf(a.day as string) - DAYS.indexOf(b.day as string),

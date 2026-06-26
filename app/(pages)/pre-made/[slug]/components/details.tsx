@@ -9,7 +9,6 @@ import { Container } from "@/components/shared/container";
 import { QUERY_PRODUCT_BY_SLUG_RESULT } from "@/sanity.types";
 import {
   useCartActions,
-  useCartItems,
   useProductTotalQuantity,
 } from "@/components/providers/cart.provider";
 import { formatPrice } from "@/lib/format";

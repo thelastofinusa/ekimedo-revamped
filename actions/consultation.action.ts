@@ -3,7 +3,6 @@
 import { siteConfig } from "@/config/site.config";
 import { resolveFieldValue } from "@/lib/consultation";
 import { getStripe } from "@/lib/stripe";
-import { getEasternDay } from "@/lib/time";
 import { FormCard } from "@/sanity.types";
 import { client, writeClient } from "@/sanity/lib/client";
 import {
@@ -14,7 +13,10 @@ import { QUERY_BOOKING_BY_ID } from "@/sanity/queries/booking.query";
 import { QUERY_BUSINESS_HOURS } from "@/sanity/queries/hour.query";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { randomUUID } from "crypto";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+
+const BOOKING_TIMEZONE = "America/New_York";
+const SLOT_INTERVAL = 30;
 
 // --------------------------------------------------------------
 // BOOK CONSULTATION – creates booking and Stripe Checkout session
@@ -29,17 +31,19 @@ export async function bookConsultation(formData: Record<string, unknown>) {
     return { success: false, message: "Missing consultation or date/time." };
   }
 
-  const dateTimeISO = dateTime as string; // e.g., "2026-07-03T16:30:00.000Z"
+  const dateTimeISO = dateTime as string; // e.g., "2026-07-03T14:30:00.000Z"
   const dateObj = new Date(dateTimeISO); // UTC Date
-  const dateStr = dateObj.toISOString().split("T")[0]; // "2026-07-03"
+  if (Number.isNaN(dateObj.getTime())) {
+    return { success: false, message: "Invalid consultation date/time." };
+  }
 
-  // Get Eastern time for business‑hour check
-  const easternTimeStr = formatInTimeZone(dateObj, "America/New_York", "HH:mm");
+  const dateStr = formatInTimeZone(dateObj, BOOKING_TIMEZONE, "yyyy-MM-dd");
+  const easternTimeStr = formatInTimeZone(dateObj, BOOKING_TIMEZONE, "HH:mm");
   const selectedMinutes = parseTime(easternTimeStr);
 
   // 1. Business hours check (early)
   const businessHours = await client.fetch(QUERY_BUSINESS_HOURS);
-  const dayOfWeek = getEasternDay(dateStr);
+  const dayOfWeek = getBookingDay(dateStr);
   const dayHours = businessHours?.hours?.find((h) => h.day === dayOfWeek);
   if (!dayHours || !dayHours.isOpen) {
     return { success: false, message: "We are closed on this day." };
@@ -249,33 +253,36 @@ export async function getAvailableTimes(
   dateStr: string,
 ): Promise<AvailabilityResult> {
   const consultation = await client.fetch(
-    `*[_type == "consultation" && slug.current == $slug][0]{ _id }`,
+    `*[_type == "consultation" && slug.current == $slug][0]{ _id, duration }`,
     { slug: consultationSlug },
   );
   if (!consultation) throw new Error("Consultation not found");
   const consultationId = consultation._id;
+  const consultationDuration = consultation.duration || SLOT_INTERVAL;
 
   // 1. Business hours
   const businessHours = await client.fetch(QUERY_BUSINESS_HOURS);
-  const dayOfWeek = getEasternDay(dateStr);
+  const dayOfWeek = getBookingDay(dateStr);
   const dayHours = businessHours?.hours?.find((h) => h.day === dayOfWeek);
   if (!dayHours || !dayHours.isOpen) {
     return { slots: [], blocked: true, message: "We are closed on this day." };
   }
   const openTime = dayHours.startTime as string;
   const closeTime = dayHours.endTime as string;
-  const SLOT_INTERVAL = 30;
   const slots: string[] = [];
   let current = parseTime(openTime);
   const close = parseTime(closeTime);
-  while (current < close) {
+  while (current + consultationDuration <= close) {
     slots.push(formatTime(current));
     current += SLOT_INTERVAL;
   }
 
   // 2. Fetch blocked slots that overlap with the day (time-range aware)
-  const startOfDay = new Date(dateStr + "T00:00:00.000Z");
-  const endOfDay = new Date(dateStr + "T23:59:59.999Z");
+  const startOfDay = fromZonedTime(`${dateStr}T00:00:00`, BOOKING_TIMEZONE);
+  const endOfDay = fromZonedTime(
+    `${addDays(dateStr, 1)}T00:00:00`,
+    BOOKING_TIMEZONE,
+  );
   const blockedSlots = await client.fetch(QUERY_BLOCKED_SLOTS, {
     consultationId,
     startOfDay: startOfDay.toISOString(),
@@ -287,18 +294,11 @@ export async function getAvailableTimes(
 
   for (const block of blockedSlots) {
     const blockStart = new Date(block.startDateTime as string);
-    const blockEnd = block.endDateTime ? new Date(block.endDateTime) : null;
+    const blockEnd = block.endDateTime
+      ? new Date(block.endDateTime as string)
+      : new Date(blockStart.getTime() + SLOT_INTERVAL * 60 * 1000);
 
-    // If block covers the entire day (00:00 to 23:59 or no end), block all slots
-    const isAllDay =
-      !blockEnd ||
-      (blockStart.getHours() === 0 &&
-        blockStart.getMinutes() === 0 &&
-        blockEnd.getHours() === 23 &&
-        blockEnd.getMinutes() === 59);
-
-    if (isAllDay) {
-      // Block everything and return immediately with the message
+    if (blockStart <= startOfDay && blockEnd >= endOfDay) {
       return {
         slots: [],
         blocked: true,
@@ -308,14 +308,15 @@ export async function getAvailableTimes(
 
     // Otherwise, check each slot against this block's time window
     for (const slot of slots) {
-      const [h, m] = slot.split(":").map(Number);
-      const slotDate = new Date(dateStr + `T${slot}:00.000Z`);
-      const slotTime = slotDate.getTime();
+      const slotStart = fromZonedTime(
+        `${dateStr}T${slot}:00`,
+        BOOKING_TIMEZONE,
+      );
+      const slotEnd = new Date(
+        slotStart.getTime() + consultationDuration * 60 * 1000,
+      );
 
-      if (
-        blockStart.getTime() <= slotTime &&
-        (!blockEnd || slotTime < blockEnd.getTime())
-      ) {
+      if (blockStart < slotEnd && blockEnd > slotStart) {
         blockedTimes.add(slot);
         if (block.message && !blockMessage) {
           blockMessage = block.message;
@@ -326,7 +327,6 @@ export async function getAvailableTimes(
 
   // 3. Fetch existing bookings for this date
   const bookings = await client.fetch(QUERY_BOOKINGS_FOR_DATE, {
-    consultationId,
     start: startOfDay.toISOString(),
     end: endOfDay.toISOString(),
   });
@@ -334,8 +334,25 @@ export async function getAvailableTimes(
   const bookedTimes = new Set<string>();
   for (const booking of bookings) {
     const bookingDate = new Date(booking.dateTime as string);
-    const mins = bookingDate.getUTCHours() * 60 + bookingDate.getUTCMinutes();
-    bookedTimes.add(formatTime(mins));
+    const bookingDuration =
+      booking.consultation?.duration || consultationDuration;
+    const bookingEnd = new Date(
+      bookingDate.getTime() + bookingDuration * 60 * 1000,
+    );
+
+    for (const slot of slots) {
+      const slotStart = fromZonedTime(
+        `${dateStr}T${slot}:00`,
+        BOOKING_TIMEZONE,
+      );
+      const slotEnd = new Date(
+        slotStart.getTime() + consultationDuration * 60 * 1000,
+      );
+
+      if (bookingDate < slotEnd && bookingEnd > slotStart) {
+        bookedTimes.add(slot);
+      }
+    }
   }
 
   // 4. Filter out blocked and booked slots
@@ -392,6 +409,20 @@ function formatTime(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function getBookingDay(dateStr: string): string {
+  return formatInTimeZone(
+    fromZonedTime(`${dateStr}T12:00:00`, BOOKING_TIMEZONE),
+    BOOKING_TIMEZONE,
+    "EEEE",
+  );
+}
+
+function addDays(dateStr: string, days: number): string {
+  const date = new Date(`${dateStr}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split("T")[0];
 }
 
 export async function updateBookingWithSessionId(

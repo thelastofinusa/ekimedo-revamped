@@ -52,7 +52,9 @@ import { MAX_FILES_UPLOAD, MAX_SIZE_UPLOAD } from "@/lib/zod";
 import { getAvailableTimes } from "@/actions/consultation.action";
 import { RadioGroup, RadioGroupItem } from "@/components/shadcn/radio-group";
 import { Lightbox } from "@/components/shared/lightbox";
-import { toZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+
+const BOOKING_TIMEZONE = "America/New_York";
 
 export const RenderControl: React.FC<{
   isSubmitting: boolean;
@@ -352,7 +354,7 @@ export const RenderControl: React.FC<{
               className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2"
               disabled={isSubmitting}
             >
-              {data.items?.map((item, index) => {
+              {data.items?.map((item) => {
                 // Safely extract image URLs as string[]
                 const imageUrls = Array.isArray(item.images)
                   ? (item.images as unknown as string[]).filter(
@@ -547,8 +549,15 @@ function DateTimeField({
   const [timeError, setTimeError] = React.useState<string | null>(null);
   const userInteracted = React.useRef(false);
 
-  const selectedDate = value ? new Date(value) : undefined;
-  const selectedTime = value ? format(selectedDate!, "HH:mm") : "";
+  const selectedDatePart = value
+    ? formatInTimeZone(new Date(value), BOOKING_TIMEZONE, "yyyy-MM-dd")
+    : undefined;
+  const selectedDate = selectedDatePart
+    ? new Date(`${selectedDatePart}T00:00:00`)
+    : undefined;
+  const selectedTime = value
+    ? formatInTimeZone(new Date(value), BOOKING_TIMEZONE, "HH:mm")
+    : "";
 
   // Show toasts only after user interaction
   React.useEffect(() => {
@@ -569,7 +578,9 @@ function DateTimeField({
 
   // Fetch availability when date part changes
   React.useEffect(() => {
-    const datePart = value ? value.split("T")[0] : undefined;
+    const datePart = value
+      ? formatInTimeZone(new Date(value), BOOKING_TIMEZONE, "yyyy-MM-dd")
+      : undefined;
     if (!datePart || !consultationSlug) {
       setAvailableSlots([]);
       setBlocked(false);
@@ -622,7 +633,7 @@ function DateTimeField({
         if (value) onChange(undefined);
       })
       .finally(() => setLoading(false));
-  }, [value, consultationSlug, onChange]);
+  }, [value, consultationSlug, onChange, getAvailability, selectedTime]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
@@ -638,9 +649,9 @@ function DateTimeField({
 
     // Construct a Date object that represents the Eastern time
     const dateStr = format(date, "yyyy-MM-dd");
-    const easternDate = toZonedTime(
+    const easternDate = fromZonedTime(
       `${dateStr}T${time}:00`,
-      "America/New_York",
+      BOOKING_TIMEZONE,
     );
 
     // Store as UTC ISO string
@@ -659,9 +670,9 @@ function DateTimeField({
     setTimeError(null);
 
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    const easternDate = toZonedTime(
+    const easternDate = fromZonedTime(
       `${dateStr}T${newTime}:00`,
-      "America/New_York",
+      BOOKING_TIMEZONE,
     );
     onChange(easternDate.toISOString());
   };

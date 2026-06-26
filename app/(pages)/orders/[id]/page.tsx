@@ -1,7 +1,7 @@
 import { Badge } from "@/components/shadcn/badge";
 import { Container } from "@/components/shared/container";
 import { getOrderStatus } from "@/constants/order";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import { formatEastern } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { sanityFetch } from "@/sanity/lib/live";

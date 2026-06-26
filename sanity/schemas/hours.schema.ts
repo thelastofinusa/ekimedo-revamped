@@ -87,7 +87,7 @@ export const businessHoursType = defineType({
               validation: (rule) =>
                 rule.custom((value, context) => {
                   const parent = context.parent as
-                    | { isOpen?: boolean }
+                    | { isOpen?: boolean; startTime?: string }
                     | undefined;
 
                   if (parent?.isOpen && !value) {
@@ -99,6 +99,15 @@ export const businessHoursType = defineType({
                     !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)
                   ) {
                     return 'Must be in HH:mm format (e.g. "17:00")';
+                  }
+
+                  if (
+                    parent?.isOpen &&
+                    parent.startTime &&
+                    value &&
+                    value <= parent.startTime
+                  ) {
+                    return "End time must be after start time";
                   }
 
                   return true;

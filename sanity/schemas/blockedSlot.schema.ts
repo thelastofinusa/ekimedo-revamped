@@ -24,13 +24,18 @@ export const blockedSlotType = defineType({
       name: "endDateTime",
       title: "End Date & Time (optional)",
       type: "datetime",
-      description: "If omitted, blocks only the exact start time.",
+      description:
+        "If omitted, blocks only the exact start time. Add an end time to block a range.",
       validation: (Rule) =>
         Rule.custom((end, context) => {
           const parent = context.parent as
             | { startDateTime?: string }
             | undefined;
-          if (end && parent?.startDateTime && end <= parent.startDateTime) {
+          if (
+            end &&
+            parent?.startDateTime &&
+            new Date(end).getTime() <= new Date(parent.startDateTime).getTime()
+          ) {
             return "End must be after start.";
           }
           return true;

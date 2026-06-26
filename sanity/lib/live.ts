@@ -9,13 +9,9 @@ const sanityWriteToken = assertValue(
   process.env.SANITY_API_WRITE_TOKEN,
   "Missing environment variable: SANITY_API_WRITE_TOKEN",
 );
-const sanityReadToken = assertValue(
-  process.env.SANITY_API_READ_TOKEN,
-  "Missing environment variable: SANITY_API_READ_TOKEN",
-);
 
 export const { sanityFetch, SanityLive } = defineLive({
   client,
   serverToken: sanityWriteToken,
-  browserToken: sanityReadToken,
+  browserToken: false,
 });

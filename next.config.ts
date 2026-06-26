@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { MAX_SERVER_BODY_SIZE_MB } from "./constants/keys";
 
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
@@ -17,12 +17,13 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com https://maps.googleapis.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https://cdn.sanity.io https://img.clerk.com",
+      "img-src 'self' data: blob: https://cdn.sanity.io https://img.clerk.com https://*.googleapis.com https://*.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://cdn.sanity.io https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.stripe.com",
-      "frame-src https://challenges.cloudflare.com https://*.stripe.com",
+      "connect-src 'self' https://cdn.sanity.io https://*.clerk.accounts.dev https://challenges.cloudflare.com https://*.stripe.com https://*.clerk.com https://*.sanity.io wss://*.sanity.io https://*.googleapis.com",
+      "frame-src 'self' https://challenges.cloudflare.com https://*.stripe.com https://www.google.com https://maps.google.com",
+      "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
     ].join("; "),
@@ -40,13 +41,11 @@ const nextConfig: NextConfig = {
   },
   headers: async () => [
     {
-      // Apply security headers to all routes
       source: "/(.*)",
       headers: securityHeaders,
     },
   ],
   images: {
-    // Only disable optimization in development; enable in production
     unoptimized: process.env.NODE_ENV === "development",
     qualities: [100, 70],
     formats: ["image/webp", "image/avif"],
@@ -61,4 +60,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

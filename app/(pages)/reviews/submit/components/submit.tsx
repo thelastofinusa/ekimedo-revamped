@@ -523,54 +523,48 @@ export const SubmitForm: React.FC<{
                       onExpire={() => form.setValue("captchaToken", "")}
                     />
 
-                    {captchaToken && (
-                      <div className="relative">
-                        <ClerkLoading>
-                          <Skeleton className="h-14" />
-                        </ClerkLoading>
-                        <ClerkLoaded>
-                          <Show when="signed-in">
-                            <Button
-                              type="submit"
-                              className="w-full"
-                              size="xl"
-                              disabled={
-                                !captchaToken ||
-                                isSubmitting ||
-                                overallProgress > 0
-                              }
-                              loadingText={
-                                overallProgress > 0
-                                  ? `Uploading files ${overallProgress}%`
-                                  : isSubmitting
-                                    ? "Please wait.."
-                                    : undefined
-                              }
-                            >
-                              Submit Review
+                    <div className="relative">
+                      <ClerkLoading>
+                        <Skeleton className="h-14" />
+                      </ClerkLoading>
+                      <ClerkLoaded>
+                        <Show when="signed-in">
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            size="xl"
+                            disabled={
+                              !captchaToken ||
+                              isSubmitting ||
+                              overallProgress > 0
+                            }
+                            loadingText={
+                              overallProgress > 0
+                                ? `Uploading files ${overallProgress}%`
+                                : isSubmitting
+                                  ? "Please wait.."
+                                  : undefined
+                            }
+                          >
+                            Submit Review
+                          </Button>
+                        </Show>
+                        <Show when="signed-out" treatPendingAsSignedOut>
+                          <SignInButton
+                            mode="modal"
+                            forceRedirectUrl={pathname}
+                            fallbackRedirectUrl={pathname}
+                            signUpForceRedirectUrl={pathname}
+                            signUpFallbackRedirectUrl={pathname}
+                          >
+                            <Button className="w-full" size="xl" type="button">
+                              <RiUser6Line className="size-4.5" />
+                              <span>Sign in to Submit</span>
                             </Button>
-                          </Show>
-                          <Show when="signed-out" treatPendingAsSignedOut>
-                            <SignInButton
-                              mode="modal"
-                              forceRedirectUrl={pathname}
-                              fallbackRedirectUrl={pathname}
-                              signUpForceRedirectUrl={pathname}
-                              signUpFallbackRedirectUrl={pathname}
-                            >
-                              <Button
-                                className="w-full"
-                                size="xl"
-                                type="button"
-                              >
-                                <RiUser6Line className="size-4.5" />
-                                <span>Sign in to Submit</span>
-                              </Button>
-                            </SignInButton>
-                          </Show>
-                        </ClerkLoaded>
-                      </div>
-                    )}
+                          </SignInButton>
+                        </Show>
+                      </ClerkLoaded>
+                    </div>
                   </form>
                 </Form>
               </>

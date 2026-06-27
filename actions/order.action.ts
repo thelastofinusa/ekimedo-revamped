@@ -76,10 +76,10 @@ function buildStripeLineItems(
     // FIX: Filter for image objects and map to extract the string URLs
     const stripeImages = product.snapshots
       ? product.snapshots
-        .filter(
-          (snap) => snap._type === "image" && typeof snap.url === "string",
-        )
-        .map((snap) => snap.url as string)
+          .filter(
+            (snap) => snap._type === "image" && typeof snap.url === "string",
+          )
+          .map((snap) => snap.url as string)
       : [];
 
     lineItems.push({
@@ -254,13 +254,7 @@ export async function createCheckoutSession(
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
-      payment_method_types: [
-        paymentMethod === "stripe"
-          ? "card"
-          : paymentMethod === "paypal"
-            ? "paypal"
-            : "card",
-      ], // 👈 fixed
+      payment_method_types: ["card"],
       customer_email: metadata.userEmail,
       metadata,
       payment_intent_data: { metadata },

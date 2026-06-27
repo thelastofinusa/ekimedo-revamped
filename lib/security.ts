@@ -2,6 +2,10 @@ import "server-only";
 
 import { headers } from "next/headers";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
+
 type RateLimitOptions = {
   key: string;
   limit: number;
@@ -13,9 +17,14 @@ type RateLimitState = {
   resetAt: number;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// In-memory rate limit store
+// NOTE: This resets on cold starts on Vercel serverless.
+// For production hardening, replace with Vercel KV / Upstash Redis.
+// ─────────────────────────────────────────────────────────────────────────────
+
 const rateLimitStore = new Map<string, RateLimitState>();
 
-// Periodic cleanup interval (every 60 seconds worth of calls)
 const PRUNE_INTERVAL_MS = 60_000;
 let lastPruneAt = Date.now();
 
@@ -30,6 +39,10 @@ function pruneExpiredEntries() {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SecurityError
+// ─────────────────────────────────────────────────────────────────────────────
+
 export class SecurityError extends Error {
   status: number;
 
@@ -40,18 +53,37 @@ export class SecurityError extends Error {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// IP Resolution
+// Uses x-real-ip (set by Vercel infrastructure, cannot be spoofed) first.
+// Falls back to the LAST entry of x-forwarded-for (added by Vercel's edge,
+// earlier entries are user-controlled and spoofable).
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function getRequestIp(): Promise<string> {
   const headerStore = await headers();
+
+  // x-real-ip is injected by Vercel and cannot be forged by the client
+  const realIp = headerStore.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
+  // The LAST value in x-forwarded-for is appended by Vercel's edge proxy
+  // and is trustworthy. Earlier values are passed through from the client.
   const forwardedFor = headerStore.get("x-forwarded-for");
-  return (
-    forwardedFor?.split(",")[0]?.trim() ||
-    headerStore.get("x-real-ip") ||
-    "unknown"
-  );
+  if (forwardedFor) {
+    const entries = forwardedFor.split(",");
+    const last = entries[entries.length - 1]?.trim();
+    if (last) return last;
+  }
+
+  return "unknown";
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Rate Limiting
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function checkRateLimit({ key, limit, windowMs }: RateLimitOptions) {
-  // Prune expired entries periodically to prevent memory leaks
   pruneExpiredEntries();
 
   const now = Date.now();
@@ -81,6 +113,7 @@ export async function enforceRateLimit(
   identity?: string | null,
 ) {
   const ip = await getRequestIp();
+  // Use identity (userId/email) if provided, fall back to IP
   const key = `${scope}:${identity || ip}`;
   const result = checkRateLimit({ key, limit, windowMs });
 
@@ -90,6 +123,10 @@ export async function enforceRateLimit(
 
   return result;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Turnstile CAPTCHA Verification
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function verifyTurnstileToken(
   token: string | undefined,
@@ -101,6 +138,7 @@ export async function verifyTurnstileToken(
     if (process.env.NODE_ENV === "production") {
       throw new SecurityError("Captcha is not configured.", 500);
     }
+    // Skip in development when secret is not configured
     return true;
   }
 
@@ -115,7 +153,6 @@ export async function verifyTurnstileToken(
     remoteip: ip,
   });
 
-  // Abort if Turnstile is slow or down (5-second timeout)
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5_000);
 
@@ -126,15 +163,12 @@ export async function verifyTurnstileToken(
       {
         method: "POST",
         body,
-        headers: {
-          "content-type": "application/x-www-form-urlencoded",
-        },
+        headers: { "content-type": "application/x-www-form-urlencoded" },
         cache: "no-store",
         signal: controller.signal,
       },
     );
   } catch (err) {
-    // In development, allow requests through if Turnstile is unreachable
     if (process.env.NODE_ENV !== "production") {
       console.warn("Turnstile verification skipped (unreachable in dev):", err);
       return true;
@@ -160,6 +194,11 @@ export async function verifyTurnstileToken(
   return true;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Sanity Action Request Verification
+// Verifies requests coming from Sanity Studio custom actions
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function verifySanityActionRequest(request: Request) {
   const secret = process.env.SANITY_ACTION_SECRET;
 
@@ -170,7 +209,9 @@ export function verifySanityActionRequest(request: Request) {
     return true;
   }
 
-  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  const bearer = request.headers
+    .get("authorization")
+    ?.replace(/^Bearer\s+/i, "");
   const headerSecret = request.headers.get("x-sanity-action-secret");
 
   if (bearer !== secret && headerSecret !== secret) {
@@ -180,7 +221,10 @@ export function verifySanityActionRequest(request: Request) {
   return true;
 }
 
-// Map of allowed MIME types to their valid file extensions
+// ─────────────────────────────────────────────────────────────────────────────
+// Image Upload Validation
+// ─────────────────────────────────────────────────────────────────────────────
+
 const ALLOWED_IMAGE_EXTENSIONS: Record<string, string[]> = {
   "image/jpeg": [".jpg", ".jpeg"],
   "image/png": [".png"],
@@ -194,7 +238,6 @@ export async function validateImageUpload(file: File) {
     throw new SecurityError("Unsupported file type.", 415);
   }
 
-  // Validate file extension matches declared MIME type
   const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
   const validExtensions = ALLOWED_IMAGE_EXTENSIONS[file.type];
   if (!ext || !validExtensions?.includes(ext)) {
@@ -226,6 +269,10 @@ export async function validateImageUpload(file: File) {
     throw new SecurityError("Invalid image file.", 415);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Filename Sanitization
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function safeFilename(filename: string) {
   return filename.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 120) || "upload";

@@ -18,11 +18,11 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 type BookConsultationResult =
   | {
-    success: true;
-    url: string | null;
-    bookingId: string;
-    consultationSlug: string;
-  }
+      success: true;
+      url: string | null;
+      bookingId: string;
+      consultationSlug: string;
+    }
   | { success: false; message: string };
 
 // --------------------------------------------------------------
@@ -76,7 +76,9 @@ export async function bookConsultation(
   if (availability.blocked) {
     return {
       success: false,
-      message: availability.message ?? "We're experiencing high demand. Please try again later or select a different time.",
+      message:
+        availability.message ??
+        "We're experiencing high demand. Please try again later or select a different time.",
     };
   }
 
@@ -193,9 +195,12 @@ export async function bookConsultation(
   try {
     const slotStart = new Date(dateTimeISO);
     const slotEnd = new Date(
-      slotStart.getTime() + (consultation.duration || SLOT_INTERVAL) * 60 * 1000,
+      slotStart.getTime() +
+        (consultation.duration || SLOT_INTERVAL) * 60 * 1000,
     );
-    const conflicting = await client.fetch<{ _id: string; _createdAt: string }[]>(
+    const conflicting = await client.fetch<
+      { _id: string; _createdAt: string }[]
+    >(
       `*[
         _type == "booking" &&
         _id != $bookingId &&
@@ -233,13 +238,7 @@ export async function bookConsultation(
     // PayPal is handled separately via native API – only "card" here
     session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: [
-        paymentMethod === "stripe"
-          ? "card"
-          : paymentMethod === "paypal"
-            ? "paypal"
-            : "card",
-      ], // 👈 fixed
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
@@ -422,19 +421,23 @@ export async function getAvailableTimes(
 }
 
 export async function cancelBooking(bookingId: string) {
-  console.log(`Attempting to cancel booking: ${bookingId}`);
+  const { userId } = await auth();
+  if (!userId) return { success: false, message: "Unauthorized" };
+
+  // Also verify the booking belongs to this user
   const booking = await client.fetch(
-    `*[_type == "booking" && _id == $id][0]{ status }`,
+    `*[_type == "booking" && _id == $id][0]{ status, customerEmail }`,
     { id: bookingId },
   );
-  console.log("Booking found:", booking);
+  const user = await currentUser();
+  if (booking?.customerEmail !== user?.primaryEmailAddress?.emailAddress) {
+    return { success: false, message: "Forbidden" };
+  }
   if (!booking) return { success: false, message: "Booking not found" };
   if (booking.status !== "pending") {
-    console.log("Booking status is not pending:", booking.status);
     return { success: false, message: "Booking already processed." };
   }
   await writeClient.patch(bookingId).set({ status: "cancelled" }).commit();
-  console.log("Booking cancelled successfully");
   return { success: true };
 }
 
@@ -443,7 +446,18 @@ export async function cancelBooking(bookingId: string) {
  * Used for displaying booking confirmation
  */
 export async function getBookingDetails(bookingId: string) {
-  const booking = await client.fetch(QUERY_BOOKING_BY_ID, { id: bookingId });
+  const { userId } = await auth();
+  if (!userId) return { success: false, message: "Unauthorized" };
+
+  // Also verify the booking belongs to this user
+  const booking = await client.fetch(
+    `*[_type == "booking" && _id == $id][0]{ status, customerEmail }`,
+    { id: bookingId },
+  );
+  const user = await currentUser();
+  if (booking?.customerEmail !== user?.primaryEmailAddress?.emailAddress) {
+    return { success: false, message: "Forbidden" };
+  }
   return booking;
 }
 

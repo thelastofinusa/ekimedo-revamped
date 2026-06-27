@@ -1,19 +1,23 @@
-/**
- * This route is responsible for the built-in authoring environment using Sanity Studio.
- * All routes under your studio path is handled by this file using Next.js' catch-all routes:
- * https://nextjs.org/docs/routing/dynamic-routes#catch-all-routes
- *
- * You can learn more about the next-sanity package here:
- * https://github.com/sanity-io/next-sanity
- */
-
 import { NextStudio } from "next-sanity/studio";
 import config from "@/sanity.config";
-
-export const dynamic = "force-static";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export { metadata, viewport } from "next-sanity/studio";
 
-export default function StudioPage() {
+export const dynamic = "force-dynamic";
+
+export default async function StudioPage() {
+  const { userId } = await auth();
+
+  const ADMIN_IDS = (process.env.ADMIN_CLERK_USER_IDS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (!userId || !ADMIN_IDS.includes(userId)) {
+    redirect("/");
+  }
+
   return <NextStudio config={config} />;
 }

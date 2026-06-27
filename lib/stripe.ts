@@ -10,7 +10,8 @@ export function getStripe(): Stripe {
       "STRIPE_SECRET_KEY environment variable is not set",
     );
     stripeInstance = new Stripe(key, {
-      apiVersion: "2026-05-27.dahlia",
+      // @ts-expect-error - Type '"2026-06-24.dahlia"' is not assignable to type '"2026-05-27.dahlia"'
+      apiVersion: "2026-06-24.dahlia",
     });
   }
   return stripeInstance;

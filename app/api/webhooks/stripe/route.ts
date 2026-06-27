@@ -48,7 +48,9 @@ interface CleanAddress {
 }
 
 // Helper to clean address (remove null/undefined and empty strings)
-const cleanAddress = (address: StripeAddress | null | undefined): CleanAddress | undefined => {
+const cleanAddress = (
+  address: StripeAddress | null | undefined,
+): CleanAddress | undefined => {
   if (!address) return undefined;
   const cleaned: CleanAddress = {};
   if (address.name) cleaned.name = address.name;
@@ -113,10 +115,9 @@ export async function POST(req: NextRequest) {
       _id: string;
       _rev: string;
       status: string;
-    } | null>(
-      `*[_type == "booking" && _id == $id][0]{ _id, _rev, status }`,
-      { id: bookingId },
-    );
+    } | null>(`*[_type == "booking" && _id == $id][0]{ _id, _rev, status }`, {
+      id: bookingId,
+    });
 
     if (!existingBooking) {
       console.error(`Booking ${bookingId} not found.`);
@@ -181,17 +182,27 @@ export async function POST(req: NextRequest) {
           customerEmail: booking.customerEmail || "",
           customerPhone: booking.customerPhone || "",
           paymentMethod: booking.paymentMethod || "stripe",
-          formFields: (booking.formFields || []).map((field: any) => ({
+          formFields: (booking.formFields || []).map((field) => ({
             fieldLabel: field.fieldLabel || "",
             fieldType: field.fieldType || "",
             fieldName: field.fieldName || "",
             value: field.value || "",
             files: Array.isArray(field.files)
               ? field.files
-                  .filter((f: any) => f?.asset?.url != null)
-                  .map((f: any) => ({ url: f.asset.url }))
+                  .filter((f) => f?.asset?.url != null)
+                  .map((f) => ({ url: f.asset?.url }))
               : undefined,
-          })),
+          })) as {
+            fieldLabel: string;
+            fieldType: string;
+            fieldName: string;
+            value: string;
+            files?:
+              | {
+                  url: string;
+                }[]
+              | undefined;
+          }[],
           socialHandles,
         }),
       });
@@ -207,17 +218,27 @@ export async function POST(req: NextRequest) {
           consultationTitle: booking.consultation?.title || "",
           dateTime: booking.dateTime || "",
           bookingId: booking._id,
-          formFields: (booking.formFields || []).map((field: any) => ({
+          formFields: (booking.formFields || []).map((field) => ({
             fieldLabel: field.fieldLabel || "",
             fieldType: field.fieldType || "",
             fieldName: field.fieldName || "",
             value: field.value || "",
             files: Array.isArray(field.files)
               ? field.files
-                  .filter((f: any) => f?.asset?.url != null)
-                  .map((f: any) => ({ url: f.asset.url }))
+                  .filter((f) => f?.asset?.url != null)
+                  .map((f) => ({ url: f.asset?.url }))
               : undefined,
-          })),
+          })) as {
+            fieldLabel: string;
+            fieldType: string;
+            fieldName: string;
+            value: string;
+            files?:
+              | {
+                  url: string;
+                }[]
+              | undefined;
+          }[],
           socialHandles,
         }),
       });
